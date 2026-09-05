@@ -13,9 +13,10 @@ import {showFiles} from "./show-files.ts"
 // dist/*.min.js -- the same self-eating arrangement as the Node bundle,
 // which is why no shim modules are needed here.
 const rollupConfig: RollupOptions = {
-    // 90.entrypoint pins the Node entry surface; the browser one is checked
-    // by builder/pack test-iife, so the negative pattern keeps it out here.
-    input: ["../src/**/*.test.ts", "!../src/90.*"],
+    // The 9x suites pin the Node entry surface, package name and require()
+    // included; the browser one is checked by builder/pack test-iife, so the
+    // negative pattern keeps them out here.
+    input: ["../src/**/*.test.ts", "!../src/9?.*"],
 
     output: {
         file: "../browser/tests/bundled.js",

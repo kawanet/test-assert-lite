@@ -31,7 +31,26 @@
   "exports": {
     ".": {
       "types": "./types/test-assert-lite.d.ts",
+      "module-sync": "./dist/test-assert-lite.mjs",
+      "require": "./dist/test-assert-lite.min.js",
       "import": "./dist/test-assert-lite.mjs"
+    },
+    "./test": {
+      "types": "./types/test.d.ts",
+      "module-sync": "./dist/test.mjs",
+      "require": "./dist/test.cjs",
+      "import": "./dist/test.mjs"
+    },
+    "./assert": {
+      "types": "./types/assert.d.ts",
+      "module-sync": "./dist/assert.mjs",
+      "require": "./dist/assert.cjs",
+      "import": "./dist/assert.mjs"
+    },
+    "./assert/strict": {
+      "types": "./types/assert-strict.d.ts",
+      "require": "./dist/assert-strict.cjs",
+      "import": "./dist/assert-strict.mjs"
     }
   },
   "files": [
@@ -39,9 +58,15 @@
     "README.md",
     "browser/import.js",
     "browser/package.json",
+    "dist/assert-strict.cjs",
+    "dist/assert-strict.mjs",
+    "dist/assert.cjs",
+    "dist/assert.mjs",
     "dist/package.json",
     "dist/test-assert-lite.min.js",
     "dist/test-assert-lite.mjs",
+    "dist/test.cjs",
+    "dist/test.mjs",
     "types/*.d.ts"
   ],
   "homepage": "https://github.com/kawanet/test-assert-lite#readme",
@@ -53,7 +78,7 @@
     "test"
   ],
   "license": "MIT",
-  "main": "./dist/test-assert-lite.mjs",
+  "main": "./dist/test-assert-lite.min.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kawanet/test-assert-lite.git"

@@ -10,10 +10,17 @@ import {showFiles} from "./show-files.ts"
 const rollupConfig: RollupOptions = {
     input: ["../src/**/*.test.ts"],
 
-    // Only the package name stays external. A regular expression such as
-    // /^[^./]/ would externalise `node:test` before the alias plugin runs,
-    // leaving the suites bound to the real runner without any warning.
-    external: ["test-assert-lite"],
+    // Only the package and its subpaths stay external. A regular expression
+    // such as /^[^./]/ would externalise `node:test` before the alias plugin
+    // runs, leaving the suites bound to the real runner without any warning.
+    external: [
+        "test-assert-lite",
+        "test-assert-lite/test",
+        "test-assert-lite/assert",
+        "test-assert-lite/assert/strict",
+        // The only builtin a suite reaches for that is not aliased away.
+        "node:module",
+    ],
 
     output: {
         file: "./tests/bundled.mjs",
@@ -36,8 +43,11 @@ const rollupConfig: RollupOptions = {
     plugins: [
         alias({
             entries: [
-                {find: "node:test", replacement: "test-assert-lite"},
-                {find: "node:assert", replacement: "test-assert-lite"},
+                // The subpaths mirror the builtins, and a string `find` also
+                // matches below it, so `node:assert/strict` lands on
+                // `test-assert-lite/assert/strict` by the same entry.
+                {find: "node:test", replacement: "test-assert-lite/test"},
+                {find: "node:assert", replacement: "test-assert-lite/assert"},
                 // The suites reach the subject by relative path so they run on
                 // the sources directly under `node --test`. Only the entry is
                 // listed: anything else stays inlined, which is what a helper

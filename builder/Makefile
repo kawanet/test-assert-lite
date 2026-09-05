@@ -18,8 +18,15 @@ PKG_DST := ../dist/package.json
 BROWSER_TEST_DST := ../browser/tests/bundled.js
 BUILDER_TEST_DST := ./tests/bundled.mjs
 
+# The subpath entries come out of one rollup run. The first file stands for
+# the run as the make target; the full list is for clean.
+EXPORTS_SRC := $(wildcard ../src/exports/*.ts)
+EXPORTS_DST := ../dist/test.mjs
+EXPORTS_ALL := $(foreach name,test assert assert-strict,../dist/$(name).mjs ../dist/$(name).cjs)
+
 MJS_CONFIG := ./rollup-mjs.config.ts
 MINJS_CONFIG := ./rollup-minjs.config.ts
+EXPORTS_CONFIG := ./rollup-exports.config.ts
 BROWSER_TEST_CONFIG := ./rollup-browser-test.config.ts
 BUILDER_TEST_CONFIG := ./rollup-builder-test.config.ts
 
@@ -36,7 +43,7 @@ MINJS_MAX_BYTES := 20000
 # This only guards against gross growth.
 TEST_MAX_BYTES := 120000
 
-ALL := $(MJS_DST) $(MINJS_DST) $(BUILDER_TEST_DST)
+ALL := $(MJS_DST) $(MINJS_DST) $(EXPORTS_DST) $(BUILDER_TEST_DST)
 
 # Build/test paths require Node's native TypeScript type-strip (default on
 # Node 22.18+). Older runtimes report BUILDABLE=NO and skip the build.
@@ -81,6 +88,13 @@ $(PKG_DST):
 	@ls -l $@
 	@echo ""
 
+# Subpath entries `test-assert-lite/test`, `/assert` and `/assert/strict`:
+# re-exports from the two bundles above, as ESM and as CommonJS glue.
+$(EXPORTS_DST): $(EXPORTS_CONFIG) $(EXPORTS_SRC) $(BUILDER_SRC) $(MJS_DST) $(MINJS_DST)
+	../node_modules/.bin/rollup -c $<
+	@ls -l $(EXPORTS_ALL)
+	@echo ""
+
 # Bundle of the test suites for browser/tests.html, with node:test and
 # node:assert pointed at the global from the .min.js build.
 $(BROWSER_TEST_DST): $(BROWSER_TEST_CONFIG) $(SRC) $(BUILDER_SRC) $(TEST_SRC) $(TYPES) $(BROWSER_SRC) $(MINJS_DST)
@@ -92,9 +106,12 @@ $(BROWSER_TEST_DST): $(BROWSER_TEST_CONFIG) $(SRC) $(BUILDER_SRC) $(TEST_SRC) $(
 
 # Bundle of the test suites with node:test and node:assert aliased to this
 # package, so the suites exercise the library with the library.
-$(BUILDER_TEST_DST): $(BUILDER_TEST_CONFIG) $(SRC) $(BUILDER_SRC) $(TEST_SRC) $(TYPES) $(MJS_DST)
+$(BUILDER_TEST_DST): $(BUILDER_TEST_CONFIG) $(SRC) $(BUILDER_SRC) $(TEST_SRC) $(TYPES) $(MJS_DST) $(EXPORTS_DST)
 	@mkdir -p $(dir $@)
 	../node_modules/.bin/rollup -c $<
+	@# Externalizing by regular expression would leave the suites bound to
+	@# the real runner without any warning, so check the alias took effect.
+	@grep -q 'from .test-assert-lite/test.' $@ || { echo "ERROR: $@ still imports node:test" >&2; exit 1; }
 	@ls -l $@
 	@test "$$(wc -c < $@)" -le $(TEST_MAX_BYTES) || { echo "ERROR: $@ exceeds $(TEST_MAX_BYTES) byte cap" >&2; exit 1; }
 	@echo ""
@@ -119,6 +136,6 @@ test-full: all
 ####
 
 clean:
-	/bin/rm -fr $(ALL) $(BROWSER_TEST_DST) $(PKG_DST)
+	/bin/rm -fr $(ALL) $(EXPORTS_ALL) $(BROWSER_TEST_DST) $(PKG_DST)
 
 .PHONY: all clean test test-full is-buildable is-not-buildable
