@@ -50,10 +50,9 @@ const rollupConfig: RollupOptions = {
                 {find: "node:assert", replacement: "test-assert-lite/assert"},
                 // The suites reach the subject by relative path so they run on
                 // the sources directly under `node --test`. Only the entry is
-                // listed: anything else stays inlined, which is what a helper
-                // such as src/test-utils/capture.ts needs.
-                {find: "./index.ts", replacement: "test-assert-lite"},
-                {find: "./../index.ts", replacement: "test-assert-lite"},
+                // matched, whatever directory the suite sits in: anything else
+                // stays inlined, which is what src/test-utils/ needs.
+                {find: /^(\.\.?\/)+index\.ts$/, replacement: "test-assert-lite"},
             ],
         }),
 

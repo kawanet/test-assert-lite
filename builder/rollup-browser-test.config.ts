@@ -29,14 +29,12 @@ const rollupConfig: RollupOptions = {
         // Every entry resolves to the real module under `node --test` and to
         // browser/import.js here. The list is a whitelist: anything absent
         // stays inlined, which is what a helper such as src/test-utils/
-        // needs.
+        // needs. The entry is matched whatever directory the suite sits in.
         alias({
             entries: [
                 {find: "node:test", replacement: fileURLToPath(new URL("../browser/import.js", import.meta.url))},
                 {find: "node:assert", replacement: fileURLToPath(new URL("../browser/import.js", import.meta.url))},
-                {find: "./index.ts", replacement: fileURLToPath(new URL("../browser/import.js", import.meta.url))},
-                // Spelling from a suite one directory down; same target.
-                {find: "./../index.ts", replacement: fileURLToPath(new URL("../browser/import.js", import.meta.url))},
+                {find: /^(\.\.?\/)+index\.ts$/, replacement: fileURLToPath(new URL("../browser/import.js", import.meta.url))},
             ],
         }),
 
