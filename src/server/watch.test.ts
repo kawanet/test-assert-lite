@@ -56,6 +56,18 @@ describe("server/watch", () => {
         assert.equal((await ask(watcher, before + 1)).status, 204)
     })
 
+    it("counts writes spaced apart as their own changes, not merged into one", async () => {
+        // Past the 100 ms debounce between them, so each settles on its own;
+        // still well short of a slow test, just past the boundary it tests.
+        const before = watcher.version
+        writeFileSync(file, "a")
+        await sleep(150)
+        assert.equal(watcher.version, before + 1)
+        writeFileSync(file, "b")
+        await sleep(150)
+        assert.equal(watcher.version, before + 2)
+    })
+
     it("sees a file saved by a rename over it, and again after that", async () => {
         const before = watcher.version
         await writeFile(join(dir, ".tmp"), "renamed")

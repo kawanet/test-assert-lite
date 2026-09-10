@@ -45,6 +45,42 @@ describe("server/channel", () => {
         run.close()
     })
 
+    it("lapses when the page never begins, within its own silence bound", async () => {
+        const run = createChannel({stdout: () => undefined, stderr: () => undefined, silence: 50})
+        await assert.rejects(run.done, /never reported in/)
+        run.close()
+    })
+
+    it("lapses on silence after begin, but not before the bound", async () => {
+        const run = createChannel({stdout: () => undefined, stderr: () => undefined, silence: 80})
+        await post(run, "begin", "")
+        // Under the bound: still open once it has passed.
+        await new Promise(next => setTimeout(next, 50))
+        let settled = false
+        void run.done.then(() => (settled = true), () => (settled = true))
+        await new Promise(next => setTimeout(next, 10))
+        assert.equal(settled, false)
+        await assert.rejects(run.done, /No word from the page for.*seconds/)
+        run.close()
+    })
+
+    it("has every word from the page restart the silence bound", async () => {
+        const run = createChannel({stdout: () => undefined, stderr: () => undefined, silence: 80})
+        await post(run, "begin", "")
+        // A word at half the bound, twice, outlives what silence from the
+        // start alone would have allowed.
+        await new Promise(next => setTimeout(next, 40))
+        await post(run, "stdout", "still here\n")
+        await new Promise(next => setTimeout(next, 40))
+        await post(run, "stdout", "still here\n")
+        let settled = false
+        void run.done.then(() => (settled = true), () => (settled = true))
+        await new Promise(next => setTimeout(next, 20))
+        assert.equal(settled, false)
+        await assert.rejects(run.done)
+        run.close()
+    })
+
     it("runs of its own do not share a path", () => {
         const a = createChannel()
         const b = createChannel()

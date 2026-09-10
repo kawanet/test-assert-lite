@@ -12,6 +12,8 @@ export interface ChannelOptions {
     stdout?: (text: string) => void
     /** Where the page's stderr goes; this process's own by default. */
     stderr?: (text: string) => void
+    /** How long the page may stay silent before the run lapses; 30 seconds by default. */
+    silence?: number
 }
 
 export interface Channel {
@@ -41,7 +43,7 @@ const SILENCE_MS = 30_000
  * within, and the verdict is what it says at its end.
  */
 export const createChannel = (options: ChannelOptions = {}): Channel => {
-    const {stdout = text => process.stdout.write(text), stderr = text => process.stderr.write(text)} = options
+    const {stdout = text => process.stdout.write(text), stderr = text => process.stderr.write(text), silence = SILENCE_MS} = options
     const path = `/@tal/run/${runId()}/`
 
     // The verdict: true from the page's end alone passes, anything else
@@ -61,8 +63,8 @@ export const createChannel = (options: ChannelOptions = {}): Channel => {
         if (timer != null) clearTimeout(timer)
         if (ended) return
         timer = setTimeout(() => lapse(new Error(begun
-            ? "No word from the page for 30 seconds: the browser, its tab or the session is gone"
-            : "The page never reported in: could the browser reach the server?")), SILENCE_MS)
+            ? `No word from the page for ${silence / 1000} seconds: the browser, its tab or the session is gone`
+            : "The page never reported in: could the browser reach the server?")), silence)
         timer.unref()
     }
     const stream = (write: (text: string) => void) => (body: string) => {
