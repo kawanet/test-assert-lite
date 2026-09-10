@@ -6,15 +6,16 @@ import {join} from "node:path"
 import {after, before, describe, it} from "node:test"
 import {CLI} from "./cli.ts"
 
-// What --serve leaves behind once it has failed: a watch still open would
-// keep the process up. A closed one leaves the count a beat later.
+// readOptions() throws before createApp() runs, so a bad argument cannot
+// reach this any more; options.test.ts covers what it refuses and reads.
+// What a running --serve leaves behind once serve() itself has failed is
+// the one boundary that still needs a real port and a real watch.
 const watching = async (): Promise<number> => {
     await new Promise(next => setTimeout(next, 50))
     return process.getActiveResourcesInfo().filter(name => name === "FSEventWrap").length
 }
 
 describe("extras/cli", () => {
-    // A suite of its own, so that --serve has a file to watch whatever was built.
     let dir: string
     let suite: string
 
@@ -26,12 +27,6 @@ describe("extras/cli", () => {
 
     after(async () => {
         await rm(dir, {recursive: true, force: true})
-    })
-
-    it("leaves no watch behind on a --port it cannot take, though --serve would watch", async () => {
-        const before = await watching()
-        assert.equal(await CLI({args: ["--serve", "--port", "invalid", suite]}), 1)
-        assert.equal(await watching(), before)
     })
 
     it("leaves no watch behind when the port asked for is taken", async () => {
