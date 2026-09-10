@@ -155,9 +155,16 @@ test-quick: all
 	cd .. && node_modules/.bin/ts-refine format --check
 	cd .. && node_modules/.bin/ts-refine imports --check
 
+# The suites that wait on real time rather than a timer test-full skips,
+# such as the reporter's ten-second heartbeat: run by hand or before a
+# release, since they would slow every run and flake where short waits
+# cannot be trusted. TAL_SLOW_TESTS=1 is what tells them to run at all.
+test-slow:
+	cd .. && TAL_SLOW_TESTS=1 node --test 'src/**/*.test.ts'
+
 ####
 
 clean:
 	/bin/rm -fr $(ALL) $(BROWSER_TEST_DST) $(PKG_DST)
 
-.PHONY: all clean test test-full is-buildable is-not-buildable
+.PHONY: all clean test test-full test-slow is-buildable is-not-buildable

@@ -103,7 +103,8 @@
     "prepack": "make -C builder is-buildable",
     "prepare": "make -C builder is-not-buildable 2> /dev/null || make -C builder clean all test",
     "test": "make -C builder test",
-    "test-max": "make -C builder clean all test && make -C builder/pack pack test-dist && make -C browser test-playwright",
+    "test-max": "make -C builder clean all test test-slow && make -C builder/pack pack test-dist && make -C browser test-playwright",
+    "test-slow": "make -C builder test-slow",
     "ts-refine": "./node_modules/.bin/ts-refine format && ./node_modules/.bin/ts-refine imports"
   },
   "sideEffects": false,
