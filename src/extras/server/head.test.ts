@@ -4,6 +4,8 @@ import {hasImportMap, withHead} from "./head.ts"
 import type {MiddlewareHandler} from "./middleware.ts"
 import {compose, createContext} from "./middleware.ts"
 
+const TITLE = "extras/server/head.test.ts"
+
 // Runs `markup` ahead of an answer of `body` with `type`, and gives back
 // what came out.
 const through = async (markup: string | ((html: string, path: string) => string), body: string | null, type?: string, status = 200): Promise<{status: number, type: string | null, body: string}> => {
@@ -13,7 +15,7 @@ const through = async (markup: string | ((html: string, path: string) => string)
     return {status: c.res.status, type: c.res.headers.get("content-type"), body: await c.res.text()}
 }
 
-describe("server/head", () => {
+describe(TITLE, () => {
     it("puts the markup before the first </head> of an HTML answer", async () => {
         const out = await through("<meta name=x>\n", "<html><head><title>t</title></head><body></body></html>", "text/html; charset=utf-8")
         assert.equal(out.body, "<html><head><title>t</title><meta name=x>\n</head><body></body></html>")

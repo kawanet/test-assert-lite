@@ -9,6 +9,8 @@ import {ImportAliasItem, ImportMapItem, Imports, importMapItems, readImportMap} 
 import {createFiles} from "./server/files.ts"
 import {UsageError} from "./usage-error.ts"
 
+const TITLE = "extras/imports.test.ts"
+
 const cwd = pathToFileURL(`${process.cwd()}/`)
 const mapFile = pathToFileURL(resolve("maps", "x.json"))
 const alias = (entry: string): ImportAliasItem => new ImportAliasItem(entry, cwd)
@@ -26,7 +28,7 @@ const refused = (fn: () => unknown, reason: RegExp): void => {
     })
 }
 
-describe("extras/imports", () => {
+describe(TITLE, () => {
     describe("an --alias item", () => {
         it("takes a relative, bare or absolute path against the working directory, in both modes", () => {
             for (const [entry, file, name] of [["a=./lib/x.mjs", resolve("lib", "x.mjs"), "x.mjs"], ["b=../y.mjs", resolve("..", "y.mjs"), "y.mjs"], ["c=vendor/z.mjs", resolve("vendor", "z.mjs"), "z.mjs"], ["d=/opt/w.mjs", "/opt/w.mjs", "w.mjs"]] as [string, string, string][]) {

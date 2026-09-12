@@ -5,7 +5,9 @@ import {join, relative, resolve, sep} from "node:path"
 import {after, before, describe, it} from "node:test"
 import {createFiles} from "./files.ts"
 
-describe("server/files", () => {
+const TITLE = "extras/server/files.test.ts"
+
+describe(TITLE, () => {
     let dir: string
     // A root as the test names it: where it sits under the fixture directory.
     const under = (root: string): string => relative(dir, root).split(sep).join("/")

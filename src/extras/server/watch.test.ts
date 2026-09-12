@@ -8,6 +8,8 @@ import {createContext} from "./middleware.ts"
 import type {Watcher} from "./watch.ts"
 import {createWatcher} from "./watch.ts"
 
+const TITLE = "extras/server/watch.test.ts"
+
 const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms))
 
 // The page's ask, without a network: GET /@tal/watch?after=<version>.
@@ -17,7 +19,7 @@ const ask = async (watcher: Watcher, after: number, method = "GET"): Promise<{st
     return {status: res?.status ?? 0, body: res == null ? "" : await res.text()}
 }
 
-describe("server/watch", () => {
+describe(TITLE, () => {
     let dir: string
     let file: string
     let other: string

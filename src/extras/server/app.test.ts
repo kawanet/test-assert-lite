@@ -12,6 +12,8 @@ import {createFiles} from "./files.ts"
 import type {Server} from "./serve.ts"
 import {serve} from "./serve.ts"
 
+const TITLE = "extras/server/app.test.ts"
+
 // fetch() will do here: every URL below is well-formed, and what the
 // server has to refuse is the server's own tests' concern.
 const get = async (url: string): Promise<{status: number, type: string, body: string}> => {
@@ -21,7 +23,7 @@ const get = async (url: string): Promise<{status: number, type: string, body: st
 
 const post = async (url: string, body: string): Promise<number> => (await fetch(url, {method: "POST", body})).status
 
-describe("server/app", () => {
+describe(TITLE, () => {
     let dir: string
     // Where the suites and the scripts are served from, and the alias.
     let tests: string

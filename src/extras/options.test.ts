@@ -3,7 +3,9 @@ import {resolve} from "node:path"
 import {describe, it} from "node:test"
 import {browserOf, mountOf, originOf, portOf, readOptions} from "./options.ts"
 
-describe("extras/options", () => {
+const TITLE = "extras/options.test.ts"
+
+describe(TITLE, () => {
     describe("portOf", () => {
         it("takes a whole number a socket can have", () => {
             assert.equal(portOf("0"), 0)

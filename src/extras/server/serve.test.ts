@@ -10,6 +10,8 @@ import type {Server} from "./serve.ts"
 import {serve} from "./serve.ts"
 import {serveStatic} from "./static.ts"
 
+const TITLE = "extras/server/serve.test.ts"
+
 interface Reply {
     status: number
     type: string
@@ -64,7 +66,7 @@ const freePort = (): Promise<number> => new Promise(resolve => {
     })
 })
 
-describe("server/serve", () => {
+describe(TITLE, () => {
     let dir: string
     let server: Server
     const lines: string[] = []

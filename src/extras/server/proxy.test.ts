@@ -7,6 +7,8 @@ import type {MiddlewareHandler} from "./middleware.ts"
 import {compose, createContext} from "./middleware.ts"
 import {proxy} from "./proxy.ts"
 
+const TITLE = "extras/server/proxy.test.ts"
+
 // The upstream: echoes what it got, or answers as its path says.
 let upstream: Server
 let base: string
@@ -18,7 +20,7 @@ const through = async (path: string, init: RequestInit = {}): Promise<Response> 
     return c.res
 }
 
-describe("server/proxy", () => {
+describe(TITLE, () => {
     before(async () => {
         upstream = createServer((req, res) => {
             let body = ""
