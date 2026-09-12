@@ -9,12 +9,12 @@ import {readFileSync} from "node:fs"
 import {createApp} from "../server/app.ts"
 import {serve} from "../server/serve.ts"
 import {VERSION} from "../version.ts"
-import {runInNode} from "./node.ts"
+import {runInNode} from "./drivers/node.ts"
+import {runInPlaywright} from "./drivers/playwright.mjs"
+import {runInWebDriver} from "./drivers/webdriver.ts"
 import type {Options} from "./options.ts"
 import {USAGE, readOptions} from "./options.ts"
-import {runInPlaywright} from "./playwright.mjs"
 import {UsageError} from "./usage-error.ts"
-import {runInWebDriver} from "./webdriver.ts"
 
 export interface CLIOptions {
     /** The arguments as the executable gets them: process.argv.slice(2). */

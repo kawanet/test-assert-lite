@@ -1,10 +1,6 @@
 *.cjs
 *.js
-*.mjs
-!bin/cli.mjs
-!src/extras/playwright.mjs
-!exports/**/*.mjs
-!sample/**/*.mjs
+### *.mjs
 *.tgz
 *~
 .DS_Store

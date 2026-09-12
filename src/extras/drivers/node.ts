@@ -5,7 +5,7 @@
 import {register} from "node:module"
 import {resolve} from "node:path"
 import {pathToFileURL} from "node:url"
-import type {Imports} from "./imports.ts"
+import type {Imports} from "../imports.ts"
 // By name, not from src/: the suites reach the package through the hook
 // below, so run() has to be the instance the package's exports point at.
 import type {TAL} from "test-assert-lite"
