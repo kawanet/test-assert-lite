@@ -159,17 +159,23 @@ export const readOptions = (args: string[]): Options => {
         throw new UsageError("--webdriver-session and --endpoint apply to --webdriver only")
     }
     const optional = serve && values.mount != null
-    if (!files.length && !(browsing && optional)) throw new UsageError()
+    if (!files.length && !(browsing && optional)) {
+        throw new UsageError("no test files specified")
+    }
 
     // Suites are ES modules: under Node a require() bypasses the hook and
     // lands on Node's own runner, and a browser has no require at all, so
     // the extensions that can only be CommonJS are refused in both. A
     // browser strips no types either, so TypeScript is refused there too.
     const commonjs = files.filter(file => /\.c[jt]s$/.test(file))
-    if (commonjs.length) throw new UsageError(`CommonJS suites are not supported: ${commonjs.join(", ")}`)
+    if (commonjs.length) {
+        throw new UsageError(`CommonJS suites are not supported: ${commonjs.join(", ")}`)
+    }
     if (browsing) {
         const typescript = [...files, ...values.script].filter(file => /\.[cm]?ts$/.test(file))
-        if (typescript.length) throw new UsageError(`a browser runs no TypeScript: ${typescript.join(", ")}`)
+        if (typescript.length) {
+            throw new UsageError(`a browser runs no TypeScript: ${typescript.join(", ")}`)
+        }
     }
 
     const imports = importsOf(values["import-map"], values.alias, browsing ? "browser" : "node")
