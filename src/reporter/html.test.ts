@@ -4,7 +4,7 @@ import {reporter} from "../index.ts"
 import type {Emit} from "../test-utils/format.ts"
 import {formatEvents} from "../test-utils/format.ts"
 
-const TITLE = "html.test.ts"
+const TITLE = "reporter/html.test.ts"
 
 const render = (send: (emit: Emit) => Promise<void>): Promise<string> =>
     formatEvents(reporter.html(), send)

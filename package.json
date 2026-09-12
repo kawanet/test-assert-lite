@@ -100,6 +100,7 @@
     "prepack": "make -C builder is-buildable",
     "prepare": "make -C builder is-not-buildable 2> /dev/null || make -C builder clean all test",
     "test": "make -C builder test",
+    "update-test-title": "find src -type f -name '*.test.ts' -exec perl -i -pe 's#(?<=^const TITLE = \").*?(?=\")#($ARGV =~ s:^src/::r)#em' {} +",
     "test-max": "make -C builder clean all test && make -C builder/pack pack test-dist && make -C browser test-playwright",
     "ts-refine": "./node_modules/.bin/ts-refine format && ./node_modules/.bin/ts-refine imports"
   },

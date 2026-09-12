@@ -4,7 +4,7 @@ import {createTAL, reporter} from "../index.ts"
 import type {Emit} from "../test-utils/format.ts"
 import {formatEvents} from "../test-utils/format.ts"
 
-const TITLE = "spec.test.ts"
+const TITLE = "reporter/spec.test.ts"
 
 // Scaffolding to drive spec() on its own, collecting what it writes.
 const render = (send: (emit: Emit) => Promise<void>): Promise<string> =>

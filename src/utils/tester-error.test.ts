@@ -3,7 +3,7 @@ import {describe, it} from "node:test"
 import {createTAL, reporter} from "../index.ts"
 import {formatEvents} from "../test-utils/format.ts"
 
-const TITLE = "common/tester-error.test.ts"
+const TITLE = "utils/tester-error.test.ts"
 
 // What the spec reporter prints for a test that failed with `error`.
 // Typed as an Error, though a runner may hand over any thrown value.
