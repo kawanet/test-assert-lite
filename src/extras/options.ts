@@ -159,7 +159,7 @@ export const readOptions = (args: string[]): Options => {
         throw new UsageError("--webdriver-session and --endpoint apply to --webdriver only")
     }
     const optional = serve && values.mount != null
-    if (!files.length && !(browsing && optional)) throw new UsageError()
+    if (!files.length && !(browsing && optional)) throw null
 
     // Suites are ES modules: under Node a require() bypasses the hook and
     // lands on Node's own runner, and a browser has no require at all, so
