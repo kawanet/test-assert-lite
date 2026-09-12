@@ -15,6 +15,7 @@ import type {Options} from "./options.ts"
 import {readOptions, USAGE} from "./options.ts"
 import {createApp} from "./server/app.ts"
 import {serve} from "./server/serve.ts"
+import {UsageError} from "./usage-error.ts"
 
 export interface CLIOptions {
     /** The arguments as the executable gets them: process.argv.slice(2). */
@@ -108,8 +109,8 @@ export const CLI = async ({args}: CLIOptions): Promise<number> => {
     try {
         options = readOptions(args)
     } catch (error) {
-        const message = !!error && stringify(error)
-        if (message) process.stderr.write(`${message}\n`)
+        if (!(error instanceof UsageError)) throw error
+        if (error.message) process.stderr.write(`${stringify(error)}\n`)
         process.stderr.write(USAGE)
         return 2 // EXIT_USAGE
     }
