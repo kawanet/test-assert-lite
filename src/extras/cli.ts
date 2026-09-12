@@ -6,12 +6,13 @@
 // expansion are left to the shell: only explicit file names are accepted.
 
 import {readFileSync} from "node:fs"
+import {stringify} from "../utils/stringify.ts"
 import {VERSION} from "../utils/version.ts"
 import {runInNode} from "./drivers/node.ts"
 import {runInPlaywright} from "./drivers/playwright.mjs"
 import {runInWebDriver} from "./drivers/webdriver.ts"
 import type {Options} from "./options.ts"
-import {USAGE, readOptions} from "./options.ts"
+import {readOptions, USAGE} from "./options.ts"
 import {createApp} from "./server/app.ts"
 import {serve} from "./server/serve.ts"
 import {UsageError} from "./usage-error.ts"
@@ -21,7 +22,7 @@ export interface CLIOptions {
     args: string[]
 }
 
-const run = async (options: Options): Promise<number> => {
+const runCLI = async (options: Options): Promise<number> => {
     if (options.mode === "help") {
         process.stdout.write(USAGE)
         return 0
@@ -103,12 +104,16 @@ const run = async (options: Options): Promise<number> => {
  * resolve hook that stays, and a suite once loaded is not loaded again.
  */
 export const CLI = async ({args}: CLIOptions): Promise<number> => {
+    let options: ReturnType<typeof readOptions>
+
     try {
-        return await run(readOptions(args))
-    } catch (error: unknown) {
+        options = readOptions(args)
+    } catch (error) {
         if (!(error instanceof UsageError)) throw error
-        if (error.message) process.stderr.write(`${error.message}\n`)
+        if (error.message) process.stderr.write(`${stringify(error)}\n`)
         process.stderr.write(USAGE)
-        return 1
+        return 2 // EXIT_USAGE
     }
+
+    return await runCLI(options)
 }
