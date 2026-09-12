@@ -6,8 +6,8 @@
 
 import {basename, resolve} from "node:path"
 import {fileURLToPath} from "node:url"
-import {Imports} from "../extras/imports.ts"
-import {packageNameOf, packageRoot} from "../extras/package-root.ts"
+import {Imports} from "../imports.ts"
+import {packageNameOf, packageRoot} from "../package-root.ts"
 import type {ChannelOptions} from "./channel.ts"
 import {createChannel} from "./channel.ts"
 import {createFiles} from "./files.ts"

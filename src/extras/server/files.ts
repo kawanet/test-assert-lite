@@ -10,7 +10,7 @@ import {createHash} from "node:crypto"
 import {realpathSync} from "node:fs"
 import {dirname, relative, resolve, sep} from "node:path"
 import {fileURLToPath} from "node:url"
-import {packageRoot} from "../extras/package-root.ts"
+import {packageRoot} from "../package-root.ts"
 
 export interface Dir {
     /** The URL path, `/@tal/<dir>/` for this package's own, `/@tal/files/<name>/` otherwise. */

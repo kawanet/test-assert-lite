@@ -4,9 +4,9 @@ import {tmpdir} from "node:os"
 import {join, resolve} from "node:path"
 import {after, before, describe, it} from "node:test"
 import {pathToFileURL} from "node:url"
-import {createFiles} from "../server/files.ts"
 import type {ImportBase} from "./imports.ts"
 import {ImportAliasItem, ImportMapItem, Imports, importMapItems, readImportMap} from "./imports.ts"
+import {createFiles} from "./server/files.ts"
 import {UsageError} from "./usage-error.ts"
 
 const cwd = pathToFileURL(`${process.cwd()}/`)

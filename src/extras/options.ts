@@ -5,9 +5,9 @@
 
 import {resolve} from "node:path"
 import {parseArgs} from "node:util"
-import {createFiles} from "../server/files.ts"
 import type {Mode} from "./imports.ts"
 import {ImportAliasItem, Imports, cwdURL, readImportMap} from "./imports.ts"
+import {createFiles} from "./server/files.ts"
 import {UsageError} from "./usage-error.ts"
 
 export const USAGE = `Usage: test-assert [options] <file...>
