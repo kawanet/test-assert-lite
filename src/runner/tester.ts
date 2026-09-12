@@ -1,6 +1,6 @@
 import type * as declared from "test-assert-lite"
-import {TesterError, cancelledByParent, parentAlreadyFinished, testRunnerError} from "../common/tester-error.ts"
 import type {ReporterControl} from "../reporter.ts"
+import {TesterError, cancelledByParent, parentAlreadyFinished, testRunnerError} from "../utils/tester-error.ts"
 import type {Args} from "./declare.ts"
 import {nameOf, normalize, skipOf, todoOf} from "./declare.ts"
 import type {HarnessState} from "./suite.ts"

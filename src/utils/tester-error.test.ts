@@ -1,7 +1,7 @@
 import {strict as assert} from "node:assert"
 import {describe, it} from "node:test"
-import {createTAL, reporter} from "./../index.ts"
-import {formatEvents} from "./../test-utils/format.ts"
+import {createTAL, reporter} from "../index.ts"
+import {formatEvents} from "../test-utils/format.ts"
 
 const TITLE = "common/tester-error.test.ts"
 

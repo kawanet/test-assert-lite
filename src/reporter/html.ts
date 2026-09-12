@@ -1,6 +1,6 @@
 import type * as declared from "test-assert-lite"
-import {$$} from "../common/stringify.ts"
-import {errorText, isSubtestsFailed} from "../common/tester-error.ts"
+import {$$} from "../utils/stringify.ts"
+import {errorText, isSubtestsFailed} from "../utils/tester-error.ts"
 import {directive} from "./spec.ts"
 
 type TestEvent = declared.TAL.TestEvent

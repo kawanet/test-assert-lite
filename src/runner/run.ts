@@ -1,6 +1,6 @@
 import type * as declared from "test-assert-lite"
 import type {ReporterControl} from "../reporter.ts"
-import {VERSION} from "../version.ts"
+import {VERSION} from "../utils/version.ts"
 import type {HarnessState} from "./suite.ts"
 import {resetHarnessState} from "./suite.ts"
 import type {Run} from "./tester.ts"

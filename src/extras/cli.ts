@@ -6,7 +6,7 @@
 // expansion are left to the shell: only explicit file names are accepted.
 
 import {readFileSync} from "node:fs"
-import {VERSION} from "../version.ts"
+import {VERSION} from "../utils/version.ts"
 import {runInNode} from "./drivers/node.ts"
 import {runInPlaywright} from "./drivers/playwright.mjs"
 import {runInWebDriver} from "./drivers/webdriver.ts"
