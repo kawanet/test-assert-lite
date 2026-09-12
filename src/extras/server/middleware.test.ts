@@ -3,9 +3,11 @@ import {describe, it} from "node:test"
 import type {Context, MiddlewareHandler} from "./middleware.ts"
 import {compose, createContext, scoped} from "./middleware.ts"
 
+const TITLE = "extras/server/middleware.test.ts"
+
 const context = (url = "http://127.0.0.1/"): Context => createContext(new Request(url))
 
-describe("server/middleware", () => {
+describe(TITLE, () => {
     describe("Context", () => {
         it("takes the path from the URL, decoded once and in full", () => {
             const c = context("http://127.0.0.1/a%20b%23c%2Bd?q=1")

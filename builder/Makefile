@@ -9,11 +9,11 @@ SHELL := bash
 
 # Tests live beside the sources, so the library inputs are the src/ tree
 # with the test files filtered back out. Sources are nested, so this walks
-# the tree. src/test-utils/ holds helpers only the suites use; src/extras/ and
-# src/server/ are a separate build target below, so none counts as library input.
-SRC := $(shell find ../src -name '*.ts' -not -name '*.test.ts' -not -path '*/test-utils/*' -not -path '*/extras/*' -not -path '*/server/*')
+# the tree. src/test-utils/ holds helpers only the suites use; src/extras/ is
+# a separate build target below, so none counts as library input.
+SRC := $(shell find ../src -name '*.ts' -not -name '*.test.ts' -not -path '*/test-utils/*' -not -path '*/extras/*')
 TEST_SRC := $(shell find ../src -name '*.test.ts') $(wildcard ../src/test-utils/*.ts)
-EXTRAS_SRC := $(wildcard ../src/extras/*.ts) ../src/extras/playwright.mjs $(wildcard ../src/server/*.ts)
+EXTRAS_SRC := $(shell find ../src/extras -name '*.ts' -or -name '*.mjs')
 TYPES := $(wildcard ../types/*.d.ts)
 BUILDER_SRC := $(wildcard ./*.ts)
 

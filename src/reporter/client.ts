@@ -4,7 +4,7 @@
 // Node's fetch() is all it uses, so it runs anywhere with a base to reach.
 
 import type * as declared from "test-assert-lite"
-import {errorText} from "../common/tester-error.ts"
+import {errorText} from "../utils/tester-error.ts"
 
 type Client = declared.TAL.Client
 type Stream = "stdout" | "stderr"

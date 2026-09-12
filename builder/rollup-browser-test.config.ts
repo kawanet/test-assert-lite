@@ -12,8 +12,8 @@ import {showFiles} from "./show-files.ts"
 const rollupConfig: RollupOptions = {
     // 90.entrypoint pins the Node entry surface; the browser one is checked
     // by builder/pack test-iife, so the negative pattern keeps it out here.
-    // src/extras/ and src/server/ tests exercise Node-only code such as the HTTP server.
-    input: ["../src/**/*.test.ts", "!../src/90.*", "!../src/extras/*", "!../src/server/*"],
+    // src/extras/ tests exercise Node-only code such as the HTTP server.
+    input: ["../src/**/*.test.ts", "!../src/90.*", "!../src/extras/*"],
 
     // Left to the import map. Listed by name rather than by pattern so the
     // alias below still sees the relative entry imports first.

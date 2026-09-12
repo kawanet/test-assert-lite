@@ -1,6 +1,6 @@
 import type * as declared from "test-assert-lite"
-import {isError} from "./../common/is-error.ts"
-import {stringify} from "./../common/stringify.ts"
+import {isError} from "../utils/is-error.ts"
+import {stringify} from "../utils/stringify.ts"
 import {AssertionError} from "./assertion-error.ts"
 
 type Predicate = declared.TAL.AssertPredicate

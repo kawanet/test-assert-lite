@@ -32,7 +32,7 @@ install: install-chromium
 PLAYWRIGHT_INSTALLED = $(shell cd .. && node -p 'require("playwright/package.json").version' 2>/dev/null)
 
 install-playwright:
-	@[ "$(PLAYWRIGHT_INSTALLED)" = "$(PLAYWRIGHT_VERSION)" ] || \
+	[ "$(PLAYWRIGHT_INSTALLED)" = "$(PLAYWRIGHT_VERSION)" ] || \
 	( cd .. && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install playwright@$(PLAYWRIGHT_VERSION) --no-save --ignore-scripts --no-audit --no-fund )
 
 # --with-deps re-runs apt-get (with sudo) even when nothing is missing. A

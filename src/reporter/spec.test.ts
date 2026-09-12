@@ -4,7 +4,7 @@ import {createTAL, reporter} from "../index.ts"
 import type {Emit} from "../test-utils/format.ts"
 import {formatEvents} from "../test-utils/format.ts"
 
-const TITLE = "spec.test.ts"
+const TITLE = "reporter/spec.test.ts"
 
 // Scaffolding to drive spec() on its own, collecting what it writes.
 const render = (send: (emit: Emit) => Promise<void>): Promise<string> =>
@@ -167,7 +167,6 @@ describe(TITLE, () => {
         assert.equal(out.split("failing tests:").length - 1, 1)
         assert.match(out, /failing tests:\n\n✖ first \(1\.000ms\)\n {2}Error: one[\s\S]*\n\n✖ second \(1\.000ms\)\n {2}Error: two/)
     })
-
 
     it("renders a skipped suite", async () => {
         const out = await render(emit => emit("test:pass", {...pass("S"), skip: true, details: {duration_ms: 1, type: "suite"}}))

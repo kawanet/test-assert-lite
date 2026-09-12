@@ -4,6 +4,8 @@ import {createChannel} from "./channel.ts"
 import type {Context} from "./middleware.ts"
 import {createContext} from "./middleware.ts"
 
+const TITLE = "extras/server/channel.test.ts"
+
 // The page's side, without a network: a POST under the run's path.
 const post = async (run: {path: string, handler: (c: Context, next: () => Promise<void>) => Promise<Response | void>}, endpoint: string, body: string, method = "POST"): Promise<number> => {
     const c = createContext(new Request(`http://127.0.0.1${run.path}${endpoint}`, {method, body: method === "POST" ? body : null}))
@@ -11,7 +13,7 @@ const post = async (run: {path: string, handler: (c: Context, next: () => Promis
     return res?.status ?? 0
 }
 
-describe("server/channel", () => {
+describe(TITLE, () => {
     it("has a path of its own, and takes each report by POST under it", async () => {
         const stdout: string[] = []
         const stderr: string[] = []

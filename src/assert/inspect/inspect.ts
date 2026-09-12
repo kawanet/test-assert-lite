@@ -1,4 +1,4 @@
-import {isError} from "./../common/is-error.ts"
+import {isError} from "../../utils/is-error.ts"
 
 // The recursion into a member, with the comparison's own state (strict or
 // loose, the cycle stamps) already closed over, so no Inspect needs to

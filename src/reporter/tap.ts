@@ -1,5 +1,5 @@
 import type * as declared from "test-assert-lite"
-import {errorText} from "../common/tester-error.ts"
+import {errorText} from "../utils/tester-error.ts"
 
 type TestEvent = declared.TAL.TestEvent
 type FormatFn = declared.TAL.FormatFn

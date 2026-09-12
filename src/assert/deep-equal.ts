@@ -1,6 +1,7 @@
-import {isError} from "./../common/is-error.ts"
-import {stringify} from "./../common/stringify.ts"
-import {inspectMap, inspectSet} from "./../inspect/collections.ts"
+import {isError} from "../utils/is-error.ts"
+import {stringify} from "../utils/stringify.ts"
+import {AssertionError} from "./assertion-error.ts"
+import {inspectMap, inspectSet} from "./inspect/collections.ts"
 import {
     type DeepEqual,
     type Inspect,
@@ -15,9 +16,14 @@ import {
     inspectRegExp,
     inspectString,
     inspectURL,
-} from "./../inspect/inspect.ts"
-import {inspectArrayBuffer, inspectArrayBufferView, inspectDataView, inspectSharedArrayBuffer, typedArrayLength} from "./../inspect/typed-array.ts"
-import {AssertionError} from "./assertion-error.ts"
+} from "./inspect/inspect.ts"
+import {
+    inspectArrayBuffer,
+    inspectArrayBufferView,
+    inspectDataView,
+    inspectSharedArrayBuffer,
+    typedArrayLength,
+} from "./inspect/typed-array.ts"
 
 const toTag = (v: object): string => Object.prototype.toString.call(v)
 

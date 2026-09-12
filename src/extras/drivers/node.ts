@@ -5,11 +5,9 @@
 import {register} from "node:module"
 import {resolve} from "node:path"
 import {pathToFileURL} from "node:url"
-import type {Imports} from "./imports.ts"
-// By name, not from src/: the suites reach the package through the hook
-// below, so run() has to be the instance the package's exports point at.
 import type {TAL} from "test-assert-lite"
 import {run} from "test-assert-lite"
+import type {Imports} from "../imports.ts"
 
 /** What the hook is handed at registration, and the only place its source and this file meet. */
 interface HookData {

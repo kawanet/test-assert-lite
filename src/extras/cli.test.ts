@@ -6,6 +6,8 @@ import {join} from "node:path"
 import {after, before, describe, it} from "node:test"
 import {CLI} from "./cli.ts"
 
+const TITLE = "extras/cli.test.ts"
+
 // What the CLI itself does between reading the arguments and running
 // them: options.test.ts covers the reading. A watch still open would keep
 // the process up; a closed one leaves the count a beat later.
@@ -14,7 +16,7 @@ const watching = async (): Promise<number> => {
     return process.getActiveResourcesInfo().filter(name => name === "FSEventWrap").length
 }
 
-describe("extras/cli", () => {
+describe(TITLE, () => {
     // A suite of its own, so that --serve has a file to watch whatever was built.
     let dir: string
     let suite: string

@@ -3,8 +3,8 @@ import {AssertionError} from "./assert/assertion-error.ts"
 import {deepEqualPair, looseSame} from "./assert/deep-equal.ts"
 import {doesNotReject, rejects} from "./assert/rejects.ts"
 import {doesNotThrow, throws} from "./assert/throws.ts"
-import {isError} from "./common/is-error.ts"
-import {messageOf, stringify} from "./common/stringify.ts"
+import {isError} from "./utils/is-error.ts"
+import {messageOf, stringify} from "./utils/stringify.ts"
 
 // An Error passed as the message is thrown as it is. node:assert applies
 // that rule to every assertion, not only to fail().
