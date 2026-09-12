@@ -13,7 +13,6 @@ const catchError = (fn: () => unknown): Error | undefined => {
     }
 }
 
-
 // An Error that arrives from an iframe or a worker has a different
 // constructor, so instanceof says no. Replacing the prototype reproduces
 // that state without a vm, which keeps this runnable in a browser.

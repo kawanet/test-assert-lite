@@ -45,7 +45,11 @@ The same file runs with Node.js or `test-assert`:
 
 ```sh
 node --test test/query.test.mjs
+
 test-assert test/query.test.mjs
+
+test-assert --webdriver test/query.test.mjs
+
 test-assert --playwright chromium test/query.test.mjs
 ```
 
@@ -102,11 +106,11 @@ test-assert test/*.test.mjs
 # Serve the suite at http://127.0.0.1:3000/
 test-assert --serve --port 3000 test/browser.test.mjs
 
-# Run in headless Chromium through Playwright
-test-assert --playwright chromium test/browser.test.mjs
-
 # Run in Safari, Chrome, or another WebDriver browser
 test-assert --webdriver test/browser.test.mjs
+
+# Run in headless Chromium through Playwright
+test-assert --playwright chromium test/browser.test.mjs
 ```
 
 - Name files directly; the shell expands globs. CommonJS suites are not supported.

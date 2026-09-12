@@ -168,7 +168,6 @@ describe(TITLE, () => {
         assert.match(out, /failing tests:\n\n✖ first \(1\.000ms\)\n {2}Error: one[\s\S]*\n\n✖ second \(1\.000ms\)\n {2}Error: two/)
     })
 
-
     it("renders a skipped suite", async () => {
         const out = await render(emit => emit("test:pass", {...pass("S"), skip: true, details: {duration_ms: 1, type: "suite"}}))
 
