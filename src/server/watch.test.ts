@@ -30,6 +30,9 @@ describe("server/watch", () => {
         await writeFile(file, "v0")
         await writeFile(other, "v0")
         watcher = createWatcher([file], 300)
+        // macOS may deliver the writes above after the watch began, and
+        // without a name; let them settle before the first ask.
+        await sleep(200)
     })
 
     after(async () => {
@@ -39,7 +42,7 @@ describe("server/watch", () => {
 
     it("holds an ask until the wait runs out, then answers 204", async () => {
         const started = Date.now()
-        assert.deepEqual(await ask(watcher, 0), {status: 204, body: ""})
+        assert.deepEqual(await ask(watcher, watcher.version), {status: 204, body: ""})
         assert.ok(Date.now() - started >= 250)
     })
 
