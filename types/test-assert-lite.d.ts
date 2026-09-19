@@ -252,10 +252,19 @@ export declare namespace TAL {
         removeEventListener(type: string, listener: (event: unknown) => void, capture?: boolean): void
     }
 
+    // What a session takes over: the five methods a page's console has.
+    interface ConsoleLike {
+        log(...args: unknown[]): void
+        info(...args: unknown[]): void
+        debug(...args: unknown[]): void
+        warn(...args: unknown[]): void
+        error(...args: unknown[]): void
+    }
+
     interface SessionOptions {
         /** What the run's events are formatted with; `reporter.spec()` unless given. */
         reporter?: ReporterFn | string
-        /** Where the formatted text goes; console.log unless given, or the CLI's stdout under a run's URL. */
+        /** Where the formatted text goes; the session's `stdout` unless given. */
         output?: OutputFn
         /**
          * The run's URL, ending in "/", when the CLI drives the page: the
@@ -269,6 +278,11 @@ export declare namespace TAL {
          * Node `true` means nothing yet.
          */
         capture?: boolean | EventTargetLike
+        /**
+         * A console the session takes over until end(): log, info and debug
+         * go to `stdout`, warn and error to `stderr`, each call one line.
+         */
+        console?: ConsoleLike
         /** Reduces output while keeping failures visible. The summary event is unchanged. */
         quiet?: boolean
     }
@@ -294,9 +308,9 @@ export declare namespace TAL {
         /** Runs every registered test, and closes the session. */
         end(): Promise<SessionResult>
         /**
-         * The console of the run: the CLI under a run's URL, or Node's own
-         * streams. Text written outside a session, before session() or after
-         * end(), waits for the next one; so does a page's with no run URL.
+         * The console of the run: the CLI under a run's URL, Node's own
+         * streams, or the console as it was when the package loaded. Text
+         * written outside a session, before session() or after end(), waits for the next one.
          */
         stdout: Writer
         stderr: Writer

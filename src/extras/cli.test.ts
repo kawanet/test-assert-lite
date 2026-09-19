@@ -38,14 +38,14 @@ describe(TITLE, () => {
         await writeFile(broken, `import {it} from "node:test"\nit("declared before the throw", () => undefined)\nthrow new Error("at the top level")\n`)
         await writeFile(fine, `import {it} from "node:test"\nit("in the other suite", () => undefined)\n`)
         const chunks: string[] = []
-        const log = console.log
-        console.log = (text: string) => chunks.push(text)
+        const write = process.stdout.write
+        process.stdout.write = ((text: string) => !!chunks.push(text)) as typeof write
         try {
             assert.equal(await CLI({args: ["--reporter", "tap", broken, fine]}), 1)
         } finally {
-            console.log = log
+            process.stdout.write = write
         }
-        const lines = chunks.join("\n").split("\n")
+        const lines = chunks.join("").split("\n")
         const results = lines.filter(line => /^(not )?ok /.test(line))
         assert.deepEqual(results, ["ok 1 - declared before the throw", `not ok 2 - broken.mjs`, "ok 3 - in the other suite"])
         assert.ok(lines.includes("# Error: at the top level"), lines.join("\n"))
@@ -55,18 +55,18 @@ describe(TITLE, () => {
         const helper = join(dir, "helper.mjs")
         await writeFile(helper, `export const name = "inline"\n`)
         const chunks: string[] = []
-        const log = console.log
+        const write = process.stdout.write
         const cwd = process.cwd()
-        console.log = (text: string) => chunks.push(text)
+        process.stdout.write = ((text: string) => !!chunks.push(text)) as typeof write
         process.chdir(dir)
         try {
             const script = `import {it} from "node:test"\nimport {name} from "./helper.mjs"\nit(name, () => undefined)\n`
             assert.equal(await CLI({args: ["--reporter", "tap", "-e", script]}), 0)
         } finally {
             process.chdir(cwd)
-            console.log = log
+            process.stdout.write = write
         }
-        const lines = chunks.join("\n").split("\n")
+        const lines = chunks.join("").split("\n")
         assert.deepEqual(lines.filter(line => /^(not )?ok /.test(line)), ["ok 1 - inline"])
     })
 

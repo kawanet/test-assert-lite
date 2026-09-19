@@ -135,6 +135,36 @@ describe(TITLE, () => {
         ])
     })
 
+    // A console of the test's own stands in for the page's.
+    it("takes a console: log to stdout, error to stderr, a call a line, and gives it back at the end", async () => {
+        seen.length = 0
+        const fake = {
+            log: (..._: unknown[]) => undefined,
+            info: (..._: unknown[]) => undefined,
+            debug: (..._: unknown[]) => undefined,
+            warn: (..._: unknown[]) => undefined,
+            error: (..._: unknown[]) => undefined,
+        }
+        const {log, warn} = fake
+        const local = createTAL()
+        local.session.session({base: RUN, output: () => undefined, console: fake})
+        assert.notEqual(fake.log, log)
+        fake.log("a", 1, "b")
+        fake.info("info")
+        fake.debug("debug")
+        fake.warn("warned")
+        fake.error(new TypeError("typed"))
+        await local.session.end()
+        assert.equal(fake.log, log)
+        assert.equal(fake.warn, warn)
+        assert.equal(seen[1]?.path, "/@tal/run/abc/stdout")
+        assert.equal(seen[1]?.body, "a 1 b\ninfo\ndebug\n")
+        assert.equal(seen[2]?.path, "/@tal/run/abc/stderr")
+        const lines = (seen[2]?.body ?? "").split("\n")
+        assert.equal(lines[0], "warned")
+        assert.match(lines[1] ?? "", /^TypeError: typed/)
+    })
+
     it("takes a URL for the base as well as a string", async () => {
         seen.length = 0
         const client = connect(new URL(RUN))

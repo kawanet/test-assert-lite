@@ -2,6 +2,8 @@ import type {TAL} from "test-assert-lite"
 import {html} from "../reporter/html.ts"
 import {spec} from "../reporter/spec.ts"
 import {tap} from "../reporter/tap.ts"
+import {isError} from "../utils/is-error.ts"
+import {stringify} from "../utils/stringify.ts"
 import {errorText} from "../utils/tester-error.ts"
 import {client} from "./client.ts"
 import {withFooter} from "./footer.ts"
@@ -13,6 +15,7 @@ type OutputFn = TAL.OutputFn
 type SessionOptions = TAL.SessionOptions
 type Writer = TAL.Writer
 type EventTargetLike = TAL.EventTargetLike
+type ConsoleLike = TAL.ConsoleLike
 
 // What a run reports with: opened by session(), or with the defaults on
 // the first declaration, until end() closes it with the verdict.
@@ -22,7 +25,7 @@ interface Open {
     end: (success: boolean) => Promise<void>
     // Opened by a declaration rather than by session(): the refusal differs.
     auto: boolean
-    // Lets go of the errors outside the tests, where capture took them.
+    // Lets go of what the session took: the errors outside the tests, and the console.
     release: () => void
 }
 
@@ -39,10 +42,9 @@ export interface SessionControl {
 }
 
 // One of the two streams. With a sink the text goes through as it comes;
-// without one, before a session and after it, or in a page with no run
-// URL, the text is held.
+// without one, before a session and after it, the text is held.
 interface Outlet extends Writer {
-    connect: (sink: ((text: string) => void) | undefined) => void
+    connect: (sink: (text: string) => void) => void
     disconnect: () => void
 }
 
@@ -62,7 +64,6 @@ const outlet = (): Outlet => {
             else held += text
         },
         connect: fn => {
-            if (fn == null) return
             sink = fn
             const text = held
             held = ""
@@ -78,15 +79,16 @@ const outlet = (): Outlet => {
 // base means nothing here.
 const CHANNEL = /^\/@tal\/run\//
 
-const defaultOutput: OutputFn = (text) => {
-    // console.log adds its own newline, so drop the trailing one
-    console.log(text.replace(/\n$/, ""))
-}
+// The console as it was when this module loaded, ahead of any page code:
+// what a page's session takes over never loops back through here.
+const native = {stdout: console.log, stderr: console.error}
 
-// Node's process streams, where they exist.
-const local = (name: "stdout" | "stderr"): ((text: string) => void) | undefined => {
+// Node's process streams where they exist, the console as loaded otherwise.
+const local = (name: "stdout" | "stderr"): ((text: string) => void) => {
     const stream = "undefined" !== typeof process ? process[name] : undefined
-    return stream?.write == null ? undefined : text => void stream.write(text)
+    if (stream?.write != null) return text => void stream.write(text)
+    const log = native[name]
+    return text => log(text.replace(/\n$/, ""))
 }
 
 // The suites are served under a digest-named directory; the name a
@@ -125,6 +127,29 @@ const capture = (harness: HarnessState, target: EventTargetLike): (() => void) =
     return () => {
         target.removeEventListener("error", onError, true)
         target.removeEventListener("unhandledrejection", onRejection)
+    }
+}
+
+// The console's methods go to the writers until released, a call a line:
+// a string as it is, an Error with its stack, anything else as an
+// assertion would show it.
+const STDOUT_LEVELS = ["log", "info", "debug"] as const
+const STDERR_LEVELS = ["warn", "error"] as const
+type Level = keyof ConsoleLike
+
+const consoleLine = (args: unknown[]): string =>
+    `${args.map(v => "string" === typeof v ? v : isError(v) ? errorText(v) : stringify(v)).join(" ")}\n`
+
+const takeConsole = (target: ConsoleLike, stdout: Writer, stderr: Writer): (() => void) => {
+    const saved = new Map<Level, ConsoleLike[Level]>()
+    const take = (level: Level, writer: Writer): void => {
+        saved.set(level, target[level])
+        target[level] = (...args) => writer.write(consoleLine(args))
+    }
+    for (const level of STDOUT_LEVELS) take(level, stdout)
+    for (const level of STDERR_LEVELS) take(level, stderr)
+    return () => {
+        for (const [level, fn] of saved) target[level] = fn
     }
 }
 
@@ -187,9 +212,16 @@ export const createSessions = (harness: HarnessState): SessionControl => {
         const named = reporterOf(options.reporter) ?? spec({quiet: options.quiet})
         const reporter = options.quiet ? named : withFooter(named)
         const url = base == null ? null : new URL(base)
+        // The report goes where the console goes unless told otherwise.
+        const output = options.output ?? ((text: string) => stdout.write(text))
         const opened = (open: Omit<Open, "release" | "auto">): Open => {
             const target = targetOf(options.capture)
-            const release = target == null ? () => undefined : capture(harness, target)
+            const releaseErrors = target == null ? () => undefined : capture(harness, target)
+            const releaseConsole = options.console == null ? () => undefined : takeConsole(options.console, stdout, stderr)
+            const release = (): void => {
+                releaseErrors()
+                releaseConsole()
+            }
             return {...open, auto, release}
         }
         if (url != null && CHANNEL.test(url.pathname)) {
@@ -197,19 +229,11 @@ export const createSessions = (harness: HarnessState): SessionControl => {
             void channel.begin()
             stdout.connect(channel.stdout)
             stderr.connect(channel.stderr)
-            return opened({
-                reporter,
-                output: options.output ?? (text => channel.stdout(text)),
-                end: channel.end,
-            })
+            return opened({reporter, output, end: channel.end})
         }
         stdout.connect(local("stdout"))
         stderr.connect(local("stderr"))
-        return opened({
-            reporter,
-            output: options.output ?? defaultOutput,
-            end: async () => undefined,
-        })
+        return opened({reporter, output, end: async () => undefined})
     }
 
     const session: TAL.SessionAPI["session"] = (options = {}) => {
