@@ -9,102 +9,104 @@ import {createTAL} from "../index.ts"
 const TITLE = "session/client.test.ts"
 
 const testStub = () => {
-    const pathLog: string[] = []
-    const bodyLog: string[] = []
+    const logs: [string, string][] = []
 
     // Keeps each request in arrival order.
     const fetch: TAL.FetchLike = async (path, init) => {
-        pathLog.push(path)
-        bodyLog.push(init.body)
+        logs.push([path, init.body])
     }
 
     const output = () => undefined
 
-    return {pathLog, bodyLog, fetch, output}
+    return {logs, fetch, output}
 }
 
 const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms))
 
-const SUCCESS = JSON.stringify({success: true})
-const FAILURE = JSON.stringify({success: false})
+const BEGIN = JSON.stringify({type: "session:begin"})
+const SUCCESS = JSON.stringify({type: "session:end", data: {success: true}})
+const FAILURE = JSON.stringify({type: "session:end", data: {success: false}})
 
-describe(TITLE, () => {
+describe(TITLE, {timeout: 1000}, () => {
     it("posts begin first, then the streams, then end, in order", async () => {
         const {session} = createTAL()
-        const {pathLog, bodyLog, fetch, output} = testStub()
+        const {logs, fetch, output} = testStub()
         session.session({fetch, output})
         session.stdout.write("one\n")
         session.stderr.write("warned\n")
         session.stdout.write("two\n")
         await session.end()
-        assert.deepEqual(pathLog, [
-            "begin",
-            "stdout",
-            "stderr",
-            "end",
-        ])
-        assert.equal(bodyLog[1], "one\ntwo\n")
-        assert.equal(bodyLog[2], "warned\n")
-        assert.equal(bodyLog[3], SUCCESS)
+
+        assert.deepEqual(logs[0], ["ipcout", BEGIN])
+        assert.deepEqual(logs[1], ["stdout", "one\ntwo\n"])
+        assert.deepEqual(logs[2], ["stderr", "warned\n"])
+        assert.deepEqual(logs[3], ["ipcout", SUCCESS])
     })
 
     it("gathers a burst of lines into one request per stream", async () => {
         const {session} = createTAL()
-        const {pathLog, bodyLog, fetch, output} = testStub()
+        const {logs, fetch, output} = testStub()
         session.session({fetch, output})
         for (let i = 0; i < 100; i++) session.stdout.write(`line ${i}\n`)
         await session.end()
-        assert.deepEqual(pathLog, ["begin", "stdout", "end"])
-        assert.equal((bodyLog[1] ?? "").split("\n").length - 1, 100)
-        assert.equal(bodyLog[2], SUCCESS)
+
+        assert.deepEqual(logs[0], ["ipcout", BEGIN])
+        assert.equal(logs[1]?.[0], "stdout")
+        assert.equal((logs[1]?.[1] ?? "").split("\n").length - 1, 100)
+        assert.deepEqual(logs[2], ["ipcout", SUCCESS])
     })
 
     it("flushes on its own while the run goes on", async () => {
         const {session} = createTAL()
-        const {pathLog, bodyLog, fetch, output} = testStub()
+        const {logs, fetch, output} = testStub()
         session.session({fetch, output})
         session.stdout.write("early\n")
         await sleep(200)
-        assert.deepEqual(pathLog, ["begin", "stdout"])
-        assert.deepEqual(bodyLog, ["", "early\n"])
+        assert.deepEqual(logs[0], ["ipcout", BEGIN])
+        assert.deepEqual(logs[1], ["stdout", "early\n"])
+
         session.stdout.write("late\n")
         await session.end()
-        assert.equal(pathLog.length, 4)
-        assert.equal(bodyLog.length, 4)
-        assert.equal(bodyLog[2], "late\n")
+        assert.equal(logs.length, 4)
+        assert.deepEqual(logs[2], ["stdout", "late\n"])
+        assert.deepEqual(logs[3], ["ipcout", SUCCESS])
     })
 
     it("sends the run's verdict: false once a test failed", async () => {
         const {session, test} = createTAL()
-        const {bodyLog, fetch, output} = testStub()
+        const {logs, fetch, output} = testStub()
         session.session({fetch, output})
         test.it("fails", () => {
             throw new Error("no")
         })
         await session.end()
-        assert.equal(bodyLog.at(-1), FAILURE)
+        assert.deepEqual(logs.at(-1), ["ipcout", FAILURE])
     })
 
     it("sends text as given", async () => {
         const {session} = createTAL()
-        const {bodyLog, fetch, output} = testStub()
+        const {logs, fetch, output} = testStub()
         session.session({fetch, output})
         session.stderr.write("as ")
         session.stderr.write("given\n")
         await session.end()
-        const lines = (bodyLog[1] ?? "").split("\n")
+
+        const lines = (logs[1]?.[1] ?? "").split("\n")
         assert.equal(lines[0], "as given")
     })
 
     it("text written before session() goes out once the session is open", async () => {
         const {session} = createTAL()
-        const {pathLog, bodyLog, fetch, output} = testStub()
+        const {logs, fetch, output} = testStub()
         session.stdout.write("early\n")
         session.stderr.write("warned\n")
         session.session({fetch, output})
         await session.end()
-        assert.deepEqual(pathLog, ["begin", "stdout", "stderr", "end"])
-        assert.deepEqual(bodyLog, ["", "early\n", "warned\n", SUCCESS])
+
+        assert.deepEqual(logs[0], ["stdout", "early\n"])
+        assert.deepEqual(logs[1], ["stderr", "warned\n"])
+        assert.deepEqual(logs[2], ["ipcout", BEGIN])
+        assert.deepEqual(logs[3], ["ipcout", SUCCESS])
     })
 
     it("does not reject when the fetch does", async () => {
@@ -120,21 +122,22 @@ describe(TITLE, () => {
 
     it("text written after end() waits for the next session", async () => {
         const {session} = createTAL()
-        const {pathLog, bodyLog, fetch, output} = testStub()
+        const {logs, fetch, output} = testStub()
         session.session({fetch, output})
         await session.end()
         session.stdout.write("later\n")
-        assert.equal(pathLog.length, 2)
-        assert.equal(bodyLog.length, 2)
+        assert.equal(logs.length, 2)
+
         session.session({fetch, output})
         await session.end()
-        assert.deepEqual(pathLog.slice(2), ["begin", "stdout", "end"])
-        assert.deepEqual(bodyLog.slice(2), ["", "later\n", SUCCESS])
+        assert.deepEqual(logs[2], ["stdout", "later\n"])
+        assert.deepEqual(logs[3], ["ipcout", BEGIN])
+        assert.deepEqual(logs[4], ["ipcout", SUCCESS])
     })
 
     // A console of the test's own stands in for the page's.
     it("takes a console: log to stdout, error to stderr, a call a line, and gives it back at the end", async () => {
-        const {pathLog, bodyLog, fetch, output} = testStub()
+        const {logs, fetch, output} = testStub()
         const fake = {
             debug: (..._: unknown[]) => undefined,
             log: (..._: unknown[]) => undefined,
@@ -154,11 +157,13 @@ describe(TITLE, () => {
         await session.end()
         assert.equal(fake.log, log)
         assert.equal(fake.warn, warn)
-        assert.equal(pathLog[1], "stdout")
-        assert.equal(bodyLog[1], "a 1 b\ninfo\ndebug\n")
-        assert.equal(pathLog[2], "stderr")
-        const lines = (bodyLog[2] ?? "").split("\n")
+
+        assert.deepEqual(logs[0], ["ipcout", BEGIN])
+        assert.deepEqual(logs[1], ["stdout", "a 1 b\ninfo\ndebug\n"])
+        assert.equal(logs[2]?.[0], "stderr")
+        const lines = (logs[2]?.[1] ?? "").split("\n")
         assert.equal(lines[0], "warned")
         assert.match(lines[1] ?? "", /^TypeError: typed/)
+        assert.deepEqual(logs[3], ["ipcout", SUCCESS])
     })
 })

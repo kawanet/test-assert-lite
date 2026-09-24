@@ -22,8 +22,6 @@ export interface Bridge {
     end: (result: TAL.SessionResult) => Promise<void>
 }
 
-type ChannelName = keyof Bridge
-
 // How long lines gather before a flush: a test's burst of output becomes
 // one request, while a person watching still sees it as it comes.
 const FLUSH_MS = 50
@@ -51,11 +49,16 @@ export const createBridgeClient = (fetch: FetchLike): Bridge => {
     let inflight: Promise<void> = Promise.resolve()
 
     // Request failures are ignored. Later requests are still attempted.
-    const post = (path: ChannelName, body: string): Promise<void> => {
+    const post = (channel: TAL.BridgeChannel, body: string): Promise<void> => {
         inflight = inflight
-            .then(() => fetch(path, {method: "POST", body}))
+            .then(() => fetch(channel, {method: "POST", body}))
             .then(() => undefined, () => undefined)
         return inflight
+    }
+
+    const send: TAL.BridgeAPI["send"] = async (message) => {
+        await flush()
+        return post("ipcout", JSON.stringify(message))
     }
 
     const flush = (): Promise<void> => {
@@ -92,15 +95,14 @@ export const createBridgeClient = (fetch: FetchLike): Bridge => {
         begin: () => {
             started = last = Date.now()
             alive ??= setInterval(tick, TICK_MS)
-            return post("begin", "")
+            return send({type: "session:begin"})
         },
         stdout,
         stderr,
         end: async (result) => {
             if (alive != null) clearInterval(alive)
             alive = null
-            await flush()
-            await post("end", JSON.stringify(result))
+            return send({type: "session:end", data: result})
         },
     }
 }

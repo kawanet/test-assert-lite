@@ -322,6 +322,20 @@ export declare namespace TAL {
         stderr: Writer
     }
 
+    // --- session bridge ---
+
+    interface BridgeAPI {
+        stdout: Writer
+        stderr: Writer
+        send: (message: SessionEvent) => Promise<void>
+    }
+
+    type SessionEvent =
+        | {type: "session:begin", data?: undefined}
+        | {type: "session:end", data: SessionResult}
+
+    type BridgeChannel = "stdout" | "stderr" | "ipcout"
+
     // --- harness ---
 
     // One isolated set of everything the package offers: the tests, the

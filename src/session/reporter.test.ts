@@ -15,7 +15,7 @@ const caught = async (promise: Promise<unknown>): Promise<unknown> => {
     }
 }
 
-describe(TITLE, () => {
+describe(TITLE, {timeout: 1000}, () => {
 
     it("rejects end() when the reporter throws", async () => {
         const local = createTAL()
@@ -86,7 +86,7 @@ describe(TITLE, () => {
         local.test.it("one", () => undefined)
 
         assert.equal(await caught(local.session.end()), failure)
-        assert.deepEqual(posts, ["begin", "end"])
+        assert.deepEqual(posts, ["ipcout", "ipcout"])
     })
 
     it("preserves an undefined reporter rejection reason", async () => {

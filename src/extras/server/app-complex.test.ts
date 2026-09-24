@@ -19,6 +19,10 @@ import {serve} from "./serve.ts"
 
 const TITLE = "extras/server/app-complex.test.ts"
 
+const BEGIN: TAL.SessionEvent = {type: "session:begin"}
+const SUCCESS: TAL.SessionEvent = {type: "session:end", data: {success: true}}
+// const FAILURE: TAL.SessionEvent = {type: "session:end", data: {success: false}}
+
 const get = async (url: string): Promise<{status: number, type: string, body: string}> => {
     const res = await fetch(url)
     return {status: res.status, type: res.headers.get("content-type") ?? "", body: await res.text()}
@@ -26,9 +30,9 @@ const get = async (url: string): Promise<{status: number, type: string, body: st
 
 const post = async (url: string, body: string): Promise<number> => (await fetch(url, {method: "POST", body})).status
 
-const nullWriter: TAL.Writer = {write: (() => undefined)}
+const postIPC = async (url: string, message: TAL.SessionEvent): Promise<number> => post(url, JSON.stringify(message))
 
-const SUCCESS = JSON.stringify({success: true})
+const nullWriter: TAL.Writer = {write: (() => undefined)}
 
 describe(TITLE, () => {
     let dir: string
@@ -169,13 +173,13 @@ describe(TITLE, () => {
 
     it("takes the run's reports by POST under its path, and the verdict from end", async () => {
         const run = app.page.slice(0, -"run.html".length)
-        assert.equal(await post(url(`${run}begin`), ""), 204)
+        assert.equal(await postIPC(url(`${run}ipcout`), BEGIN), 204)
         assert.equal(await post(url(`${run}stdout`), "one\n"), 204)
         assert.equal(stdout.read(), "one\n")
         assert.equal((await get(url(`${run}stdout`))).status, 405)
         assert.equal(await post(url(`${run}nothing`), ""), 404)
         assert.equal(await post(url("/index.html"), ""), 405)
-        assert.equal(await post(url(`${run}end`), SUCCESS), 204)
+        assert.equal(await postIPC(url(`${run}ipcout`), SUCCESS), 204)
         assert.equal((await sharedServices.finished)?.success, true)
     })
 })
