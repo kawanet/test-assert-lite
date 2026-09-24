@@ -37,10 +37,11 @@ describe(TITLE, {timeout: 1000}, () => {
         session.stdout.write("two\n")
         await session.end()
 
-        assert.deepEqual(logs[0], ["ipcout", BEGIN])
-        assert.deepEqual(logs[1], ["stdout", "one\ntwo\n"])
-        assert.deepEqual(logs[2], ["stderr", "warned\n"])
-        assert.deepEqual(logs[3], ["ipcout", SUCCESS])
+        assert.deepEqual(logs.shift(), ["ipcout", BEGIN])
+        assert.deepEqual(logs.shift(), ["stdout", "one\n"])
+        assert.deepEqual(logs.shift(), ["stderr", "warned\n"])
+        assert.deepEqual(logs.shift(), ["stdout", "two\n"])
+        assert.deepEqual(logs.shift(), ["ipcout", SUCCESS])
     })
 
     it("gathers a burst of lines into one request per stream", async () => {

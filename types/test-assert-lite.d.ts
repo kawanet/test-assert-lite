@@ -325,9 +325,9 @@ export declare namespace TAL {
     // --- session bridge ---
 
     interface BridgeAPI {
-        stdout: Writer
-        stderr: Writer
-        send: (message: SessionEvent) => Promise<void>
+        stdout: (chunk: string) => Promise<unknown>
+        stderr: (chunk: string) => Promise<unknown>
+        ipcout: (message: SessionEvent) => Promise<unknown>
     }
 
     type SessionEvent =

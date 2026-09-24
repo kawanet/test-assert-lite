@@ -8,7 +8,7 @@ import {createBufWriter} from "../utils/buf-writer.ts"
 
 type FetchLike = TAL.FetchLike
 
-export interface Bridge {
+export interface SessionClient {
     /** Tells the CLI the page is up; it waits for this with a timeout. */
     begin: () => Promise<void>
 
@@ -33,6 +33,8 @@ const FLUSH_MS = 50
 const QUIET_MS = 10_000
 const TICK_MS = 1_000
 
+const NOP = async () => undefined
+
 const wrapWriter = (writer: TAL.Writer, fn: () => void): TAL.Writer => {
     return {
         write: (chunk: string) => {
@@ -47,15 +49,18 @@ const wrapWriter = (writer: TAL.Writer, fn: () => void): TAL.Writer => {
  * and `end`. Sending never rejects. The page can do nothing about a CLI
  * that went away.
  */
-export const createBridgeClient = (fetch: FetchLike): Bridge => {
+export const createBridgeClient = (fetch: FetchLike): SessionClient => {
+    return heartbeatClient(bufferClient(bridgeToClient(inOrderBridge(fetchToBridge(fetch)))))
+}
+
+export const heartbeatClient = (client: SessionClient): SessionClient => {
     let alive: ReturnType<typeof setInterval> | null = null
     let started = 0
     let last = 0
 
-    const bridge = createBufBridge(fetch)
     const onWrite = () => (last = Date.now())
-    const stdout = wrapWriter(bridge.stdout, onWrite)
-    const stderr = wrapWriter(bridge.stderr, onWrite)
+    const stdout = wrapWriter(client.stdout, onWrite)
+    const stderr = wrapWriter(client.stderr, onWrite)
 
     const tick = (): void => {
         if (Date.now() - last < QUIET_MS) return
@@ -67,59 +72,101 @@ export const createBridgeClient = (fetch: FetchLike): Bridge => {
             last = Date.now()
             started ||= last
             alive ??= setInterval(tick, TICK_MS)
-            return bridge.begin()
+            return client.begin()
         },
         stdout,
         stderr,
         end: async (result) => {
             if (alive != null) clearInterval(alive)
             alive = null
-            return bridge.end(result)
+            return client.end(result)
         },
     }
 }
 
-export const createBufBridge = (fetch: FetchLike): Bridge => {
-    const stdout = createBufWriter()
-    const stderr = createBufWriter()
-    let timer: ReturnType<typeof setTimeout> | null = null
-    const onWrite = () => (timer ??= setTimeout(flush, FLUSH_MS))
+interface DelayedWriter extends TAL.Writer {
+    flush: () => void
+}
 
+export const bufferClient = (client: SessionClient): SessionClient => {
+    const delayedWriter = (writer: TAL.Writer): DelayedWriter => {
+        const buf = createBufWriter()
+        let timer: ReturnType<typeof setTimeout> | null = null
+
+        const flush = () => {
+            if (timer != null) clearTimeout(timer)
+            timer = null
+            const chunk = buf.read()
+            if (chunk) writer.write(chunk)
+        }
+
+        return {
+            write: (chunk) => {
+                buf.write(chunk)
+                timer ??= setTimeout(flush, FLUSH_MS)
+            },
+            flush,
+        }
+    }
+
+    const stdout = delayedWriter(client.stdout)
+    const stderr = delayedWriter(client.stderr)
+
+    return {
+        begin: () => {
+            stdout.flush()
+            stderr.flush()
+            return client.begin()
+        },
+        stdout: {
+            write: (chunk) => {
+                stderr.flush()
+                stdout.write(chunk)
+            },
+        },
+        stderr: {
+            write: (chunk) => {
+                stdout.flush()
+                stderr.write(chunk)
+            },
+        },
+        end: (result) => {
+            stdout.flush()
+            stderr.flush()
+            return client.end(result)
+        },
+    }
+}
+
+const bridgeToClient = (bridge: TAL.BridgeAPI): SessionClient => {
+    return {
+        begin: () => bridge.ipcout({type: "session:begin"}).then(NOP, NOP),
+        stdout: {write: (chunk) => bridge.stdout(chunk).catch(NOP)},
+        stderr: {write: (chunk) => bridge.stderr(chunk).catch(NOP)},
+        end: (data) => bridge.ipcout({type: "session:end", data}).then(NOP, NOP),
+    }
+}
+
+export const inOrderBridge = (bridge: TAL.BridgeAPI): TAL.BridgeAPI => {
     // Every request follows the one before, so each stream stays in order.
     let inflight: Promise<void> = Promise.resolve()
 
     // Request failures are ignored. Later requests are still attempted.
-    const post = (channel: TAL.BridgeChannel, body: string): Promise<void> => {
-        inflight = inflight
-            .then(() => fetch(channel, {method: "POST", body}))
-            .then(() => undefined, () => undefined)
-        return inflight
-    }
-
-    const send: TAL.BridgeAPI["send"] = async (message) => {
-        await flush()
-        return post("ipcout", JSON.stringify(message))
-    }
-
-    const flush = (): Promise<void> => {
-        if (timer != null) clearTimeout(timer)
-        timer = null
-        // Emptied and queued in one synchronous step, so end() cannot get ahead.
-        const stdoutText = stdout.read()
-        const stderrText = stderr.read()
-        if (stdoutText) void post("stdout", stdoutText)
-        if (stderrText) void post("stderr", stderrText)
-        return inflight
+    const chain = (fn: () => Promise<unknown>): Promise<void> => {
+        return inflight = inflight.then(fn).then(NOP, NOP)
     }
 
     return {
-        begin: () => {
-            return send({type: "session:begin"})
-        },
-        stdout: wrapWriter(stdout, onWrite),
-        stderr: wrapWriter(stderr, onWrite),
-        end: async (result) => {
-            return send({type: "session:end", data: result})
-        },
+        stdout: chunk => chain(() => bridge.stdout(chunk)),
+        stderr: chunk => chain(() => bridge.stderr(chunk)),
+        ipcout: message => chain(() => bridge.ipcout(message)),
+    }
+}
+
+export const fetchToBridge = (fetch: FetchLike): TAL.BridgeAPI => {
+    return {
+        stdout: chunk => fetch("stdout", {method: "POST", body: chunk}),
+        stderr: chunk => fetch("stderr", {method: "POST", body: chunk}),
+        ipcout: message => fetch("ipcout", {method: "POST", body: JSON.stringify(message)}),
     }
 }

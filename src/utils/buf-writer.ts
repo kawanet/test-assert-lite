@@ -20,7 +20,7 @@ export const createBufWriter = (): BufWriter => {
 
     return {
         write: (chunk) => void buf.push(chunk),
-        read: () => buf.splice(0).join(""),
+        read: () => !buf.length ? "" : buf.splice(0).join(""),
     }
 }
 
