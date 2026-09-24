@@ -68,6 +68,13 @@ const freePort = (): Promise<number> => new Promise(resolve => {
     })
 })
 
+// Whether this host has the IPv6 family at all. A container often does not.
+const hasIPv6 = (): Promise<boolean> => new Promise(resolve => {
+    const probe = listen()
+    probe.once("error", () => resolve(false))
+    probe.listen(0, "::", () => probe.close(() => resolve(true)))
+})
+
 describe(TITLE, () => {
     let dir: string
     let server: Server
@@ -323,18 +330,27 @@ describe(TITLE, () => {
         }
     })
 
-    it("names the loopback of the family for a wildcard address", async () => {
-        const service4 = createRunServices()
-        const service6 = createRunServices()
-        const v4 = await serve({handler: async c => c.body("4"), host: "0.0.0.0", services: service4})
-        const v6 = await serve({handler: async c => c.body("6"), host: "::", services: service6})
+    it("names 127.0.0.1 for the IPv4 wildcard 0.0.0.0", async () => {
+        const services = createRunServices()
         try {
+            const v4 = await serve({handler: async c => c.body("4"), host: "0.0.0.0", services})
             assert.match(v4.origin, /^http:\/\/127\.0\.0\.1:\d+$/)
+            assert.equal((await get(v4.origin, "/")).body, "4")
+        } finally {
+            await services.cleanup()
+        }
+    })
+
+    it("names [::1] in brackets for the IPv6 wildcard ::", async t => {
+        const ipv6 = await hasIPv6()
+        if (!ipv6) return t.skip("IPv6 is not available")
+        const services = createRunServices()
+        try {
+            const v6 = await serve({handler: async c => c.body("6"), host: "::", services})
             assert.match(v6.origin, /^http:\/\/\[::1\]:\d+$/)
             assert.equal((await get(v6.origin, "/")).body, "6")
         } finally {
-            await service4.cleanup()
-            await service6.cleanup()
+            await services.cleanup()
         }
     })
 
