@@ -33,18 +33,58 @@ const FLUSH_MS = 50
 const QUIET_MS = 10_000
 const TICK_MS = 1_000
 
+const wrapWriter = (writer: TAL.Writer, fn: () => void): TAL.Writer => {
+    return {
+        write: (chunk: string) => {
+            writer.write(chunk)
+            fn()
+        },
+    }
+}
+
 /**
  * Creates the page's bridge to the CLI through `begin`, `stdout`, `stderr`
  * and `end`. Sending never rejects. The page can do nothing about a CLI
  * that went away.
  */
 export const createBridgeClient = (fetch: FetchLike): Bridge => {
-    const stdoutBuf = createBufWriter()
-    const stderrBuf = createBufWriter()
-    let timer: ReturnType<typeof setTimeout> | null = null
     let alive: ReturnType<typeof setInterval> | null = null
     let started = 0
     let last = 0
+
+    const bridge = createBufBridge(fetch)
+    const onWrite = () => (last = Date.now())
+    const stdout = wrapWriter(bridge.stdout, onWrite)
+    const stderr = wrapWriter(bridge.stderr, onWrite)
+
+    const tick = (): void => {
+        if (Date.now() - last < QUIET_MS) return
+        stderr.write(`⏳ ${Math.round((Date.now() - started) / 1000)}s\n`)
+    }
+
+    return {
+        begin: () => {
+            last = Date.now()
+            started ||= last
+            alive ??= setInterval(tick, TICK_MS)
+            return bridge.begin()
+        },
+        stdout,
+        stderr,
+        end: async (result) => {
+            if (alive != null) clearInterval(alive)
+            alive = null
+            return bridge.end(result)
+        },
+    }
+}
+
+export const createBufBridge = (fetch: FetchLike): Bridge => {
+    const stdout = createBufWriter()
+    const stderr = createBufWriter()
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const onWrite = () => (timer ??= setTimeout(flush, FLUSH_MS))
+
     // Every request follows the one before, so each stream stays in order.
     let inflight: Promise<void> = Promise.resolve()
 
@@ -65,43 +105,20 @@ export const createBridgeClient = (fetch: FetchLike): Bridge => {
         if (timer != null) clearTimeout(timer)
         timer = null
         // Emptied and queued in one synchronous step, so end() cannot get ahead.
-        const stdoutText = stdoutBuf.read()
-        const stderrText = stderrBuf.read()
+        const stdoutText = stdout.read()
+        const stderrText = stderr.read()
         if (stdoutText) void post("stdout", stdoutText)
         if (stderrText) void post("stderr", stderrText)
         return inflight
     }
 
-    // A write arms the flush and counts as a word from the page.
-    const wrap = (writer: TAL.Writer): TAL.Writer => {
-        return {
-            write: (chunk: string) => {
-                writer.write(chunk)
-                last = Date.now()
-                timer ??= setTimeout(flush, FLUSH_MS)
-            },
-        }
-    }
-
-    const stdout = wrap(stdoutBuf)
-    const stderr = wrap(stderrBuf)
-
-    const tick = (): void => {
-        if (Date.now() - last < QUIET_MS) return
-        stderr.write(`⏳ ${Math.round((Date.now() - started) / 1000)}s\n`)
-    }
-
     return {
         begin: () => {
-            started = last = Date.now()
-            alive ??= setInterval(tick, TICK_MS)
             return send({type: "session:begin"})
         },
-        stdout,
-        stderr,
+        stdout: wrapWriter(stdout, onWrite),
+        stderr: wrapWriter(stderr, onWrite),
         end: async (result) => {
-            if (alive != null) clearInterval(alive)
-            alive = null
             return send({type: "session:end", data: result})
         },
     }
