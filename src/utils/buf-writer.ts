@@ -8,6 +8,10 @@ interface BufWriter extends TAL.Writer {
     read: () => string
 }
 
+interface DelayedWriter extends TAL.Writer {
+    flush: () => void
+}
+
 // Holds the text until a writer is connected, then passes it through as it
 // comes. Disconnected, it holds again.
 interface ConnectWriter extends TAL.Writer {
@@ -21,6 +25,26 @@ export const createBufWriter = (): BufWriter => {
     return {
         write: (chunk) => void buf.push(chunk),
         read: () => !buf.length ? "" : buf.splice(0).join(""),
+    }
+}
+
+export const delayedBufWriter = (writer: TAL.Writer, interval: number): DelayedWriter => {
+    const buf = createBufWriter()
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const flush = () => {
+        if (timer != null) clearTimeout(timer)
+        timer = null
+        const chunk = buf.read()
+        if (chunk) writer.write(chunk)
+    }
+
+    return {
+        write: (chunk) => {
+            buf.write(chunk)
+            timer ??= setTimeout(flush, interval)
+        },
+        flush,
     }
 }
 

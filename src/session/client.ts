@@ -4,7 +4,7 @@
 // console lines is one round trip.
 
 import type {TAL} from "test-assert-lite"
-import {createBufWriter} from "../utils/buf-writer.ts"
+import {delayedBufWriter} from "../utils/buf-writer.ts"
 
 type FetchLike = TAL.FetchLike
 
@@ -35,7 +35,7 @@ const TICK_MS = 1_000
 
 const NOP = async () => undefined
 
-const wrapWriter = (writer: TAL.Writer, fn: () => void): TAL.Writer => {
+const onWrite = (writer: TAL.Writer, fn: () => void): TAL.Writer => {
     return {
         write: (chunk: string) => {
             writer.write(chunk)
@@ -58,9 +58,8 @@ export const heartbeatClient = (client: SessionClient): SessionClient => {
     let started = 0
     let last = 0
 
-    const onWrite = () => (last = Date.now())
-    const stdout = wrapWriter(client.stdout, onWrite)
-    const stderr = wrapWriter(client.stderr, onWrite)
+    const tack = () => (last = Date.now())
+    const {stdout, stderr} = client
 
     const tick = (): void => {
         if (Date.now() - last < QUIET_MS) return
@@ -74,8 +73,8 @@ export const heartbeatClient = (client: SessionClient): SessionClient => {
             alive ??= setInterval(tick, TICK_MS)
             return client.begin()
         },
-        stdout,
-        stderr,
+        stdout: onWrite(stdout, tack),
+        stderr: onWrite(stderr, tack),
         end: async (result) => {
             if (alive != null) clearInterval(alive)
             alive = null
@@ -84,33 +83,9 @@ export const heartbeatClient = (client: SessionClient): SessionClient => {
     }
 }
 
-interface DelayedWriter extends TAL.Writer {
-    flush: () => void
-}
-
 export const bufferClient = (client: SessionClient): SessionClient => {
-    const delayedWriter = (writer: TAL.Writer): DelayedWriter => {
-        const buf = createBufWriter()
-        let timer: ReturnType<typeof setTimeout> | null = null
-
-        const flush = () => {
-            if (timer != null) clearTimeout(timer)
-            timer = null
-            const chunk = buf.read()
-            if (chunk) writer.write(chunk)
-        }
-
-        return {
-            write: (chunk) => {
-                buf.write(chunk)
-                timer ??= setTimeout(flush, FLUSH_MS)
-            },
-            flush,
-        }
-    }
-
-    const stdout = delayedWriter(client.stdout)
-    const stderr = delayedWriter(client.stderr)
+    const stdout = delayedBufWriter(client.stdout, FLUSH_MS)
+    const stderr = delayedBufWriter(client.stderr, FLUSH_MS)
 
     return {
         begin: () => {
