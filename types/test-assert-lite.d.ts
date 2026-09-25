@@ -278,7 +278,7 @@ export declare namespace TAL {
         /** Where the formatted text goes; the session's `stdout` unless given. */
         output?: OutputFn
         /** Reports the run to the CLI, with this. Nothing is sent without it. */
-        fetch?: FetchLike
+        bridge?: SessionBridge
         /**
          * Takes the errors outside the tests, until end(): the uncaught
          * exceptions and unhandled rejections of the window or the process
@@ -313,20 +313,20 @@ export declare namespace TAL {
         load(file: string): Promise<void>
         /** Runs every registered test, and closes the session. */
         end(): Promise<SessionResult>
-        /**
-         * The console of the run: the CLI when a fetch is given, Node's own
-         * streams, or the console as the session found it. Text
-         * written outside a session, before session() or after end(), waits for the next one.
-         */
+        /** The console of the session */
         stdout: Writer
         stderr: Writer
+        /** Builds a bridge object with fetch API */
+        bridge: (fetch: FetchLike) => SessionBridge
     }
 
     // --- session bridge ---
 
-    interface BridgeAPI {
-        stdout: (chunk: string) => Promise<unknown>
-        stderr: (chunk: string) => Promise<unknown>
+    interface SessionBridge {
+        /** The console of the session */
+        stdout: Writer
+        stderr: Writer
+        /** IPC channel for SessionEvent */
         send: (message: SessionEvent) => Promise<unknown>
     }
 

@@ -7,7 +7,7 @@ import type {Run} from "../suite/job.ts"
 import {createConnectWriter, pureWriter} from "../utils/buf-writer.ts"
 import type {RunServices} from "../utils/run-services.ts"
 import {createRunServices} from "../utils/run-services.ts"
-import {createBridgeClient} from "./client.ts"
+import {bufferedBridge, clientFromBridge} from "./client.ts"
 import {consoleWriters, saveConsole, takeConsole} from "./console.ts"
 import type {ReportStream} from "./report-stream.ts"
 import {createReportStream} from "./report-stream.ts"
@@ -52,8 +52,6 @@ export interface Sessions {
 
 const hasProcess = (): boolean => "undefined" !== typeof process && process.stdout?.write != null
 
-const NOP = async () => undefined
-
 export const createSessions = (harness: HarnessState, assert: TAL.TestContextAssert): Sessions => {
     let cycle: Cycle | null = null
     const stdout = createConnectWriter()
@@ -67,7 +65,7 @@ export const createSessions = (harness: HarnessState, assert: TAL.TestContextAss
         const found = options.console ?? globalThis.console
         const saved = saveConsole(found)
         // The run's text goes to the CLI, to Node's streams, or to the console as found.
-        const bridge = options.fetch == null ? null : createBridgeClient(options.fetch)
+        const bridge = options.bridge == null ? null : clientFromBridge(bufferedBridge(options.bridge))
         const services = createRunServices(
             bridge != null ? {stdout: bridge.stdout, stderr: bridge.stderr}
                 : hasProcess() ? {}
@@ -103,7 +101,7 @@ export const createSessions = (harness: HarnessState, assert: TAL.TestContextAss
             assert,
             closed: false,
         }
-        const close = bridge?.end ?? NOP
+        const close: Cycle["close"] = async (result) => bridge?.end(result)
         return {services, report, close, auto, run, startedAt: performance.now(), held: true, walk: null, closing: false, failure: undefined}
     }
 

@@ -6,9 +6,7 @@
 import type {TAL} from "test-assert-lite"
 import {delayedBufWriter} from "../utils/buf-writer.ts"
 
-type FetchLike = TAL.FetchLike
-
-export interface SessionClient {
+interface BridgeClient {
     /** Tells the CLI the page is up; it waits for this with a timeout. */
     begin: () => Promise<void>
 
@@ -20,6 +18,12 @@ export interface SessionClient {
 
     /** The verdict as JSON, sent once the buffers have drained. */
     end: (result: TAL.SessionResult) => Promise<void>
+}
+
+interface BridgeIPC {
+    stdout: (chunk: string) => Promise<unknown>
+    stderr: (chunk: string) => Promise<unknown>
+    send: (message: TAL.SessionEvent) => Promise<unknown>
 }
 
 // How long lines gather before a flush: a test's burst of output becomes
@@ -45,15 +49,9 @@ const onWrite = (writer: TAL.Writer, fn: () => void): TAL.Writer => {
 }
 
 /**
- * Creates the page's bridge to the CLI through `begin`, `stdout`, `stderr`
- * and `end`. Sending never rejects. The page can do nothing about a CLI
- * that went away.
+ * Creates the page's bridge to the CLI through `begin`, `stdout`, `stderr` and `end`.
  */
-export const createBridgeClient = (fetch: FetchLike): SessionClient => {
-    return heartbeatClient(bufferClient(bridgeToClient(inOrderBridge(fetchToBridge(fetch)))))
-}
-
-export const heartbeatClient = (client: SessionClient): SessionClient => {
+export const clientFromBridge = (client: TAL.SessionBridge): BridgeClient => {
     let alive: ReturnType<typeof setInterval> | null = null
     let started = 0
     let last = 0
@@ -67,32 +65,27 @@ export const heartbeatClient = (client: SessionClient): SessionClient => {
     }
 
     return {
-        begin: () => {
+        begin: async () => {
             last = Date.now()
             started ||= last
             alive ??= setInterval(tick, TICK_MS)
-            return client.begin()
+            await client.send({type: "session:begin"})
         },
         stdout: onWrite(stdout, tack),
         stderr: onWrite(stderr, tack),
-        end: async (result) => {
+        end: async (data) => {
             if (alive != null) clearInterval(alive)
             alive = null
-            return client.end(result)
+            await client.send({type: "session:end", data})
         },
     }
 }
 
-export const bufferClient = (client: SessionClient): SessionClient => {
+export const bufferedBridge = (client: TAL.SessionBridge): TAL.SessionBridge => {
     const stdout = delayedBufWriter(client.stdout, FLUSH_MS)
     const stderr = delayedBufWriter(client.stderr, FLUSH_MS)
 
     return {
-        begin: () => {
-            stdout.flush()
-            stderr.flush()
-            return client.begin()
-        },
         stdout: {
             write: (chunk) => {
                 stderr.flush()
@@ -105,24 +98,17 @@ export const bufferClient = (client: SessionClient): SessionClient => {
                 stderr.write(chunk)
             },
         },
-        end: (result) => {
+        send: (message) => {
             stdout.flush()
             stderr.flush()
-            return client.end(result)
+            return client.send(message)
         },
     }
 }
 
-const bridgeToClient = (bridge: TAL.BridgeAPI): SessionClient => {
-    return {
-        begin: () => bridge.send({type: "session:begin"}).then(NOP, NOP),
-        stdout: {write: (chunk) => bridge.stdout(chunk).catch(NOP)},
-        stderr: {write: (chunk) => bridge.stderr(chunk).catch(NOP)},
-        end: (data) => bridge.send({type: "session:end", data}).then(NOP, NOP),
-    }
-}
+export const bridgeFromFetch = (fetch: TAL.FetchLike): TAL.SessionBridge => {
+    const bridge = ipcFromFetch(fetch)
 
-export const inOrderBridge = (bridge: TAL.BridgeAPI): TAL.BridgeAPI => {
     // Every request follows the one before, so each stream stays in order.
     let inflight: Promise<void> = Promise.resolve()
 
@@ -132,13 +118,13 @@ export const inOrderBridge = (bridge: TAL.BridgeAPI): TAL.BridgeAPI => {
     }
 
     return {
-        stdout: chunk => chain(() => bridge.stdout(chunk)),
-        stderr: chunk => chain(() => bridge.stderr(chunk)),
-        send: message => chain(() => bridge.send(message)),
+        stdout: {write: (chunk) => void chain(() => bridge.stdout(chunk))},
+        stderr: {write: (chunk) => void chain(() => bridge.stderr(chunk))},
+        send: (message) => chain(() => bridge.send(message)),
     }
 }
 
-export const fetchToBridge = (fetch: FetchLike): TAL.BridgeAPI => {
+const ipcFromFetch = (fetch: TAL.FetchLike): BridgeIPC => {
     return {
         stdout: chunk => fetch("stdout", {method: "POST", body: chunk}),
         stderr: chunk => fetch("stderr", {method: "POST", body: chunk}),

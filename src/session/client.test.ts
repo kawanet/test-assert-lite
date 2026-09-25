@@ -8,17 +8,16 @@ import {createTAL} from "../index.ts"
 
 const TITLE = "session/client.test.ts"
 
-const testStub = () => {
+const testStub = (session: TAL.SessionAPI, fetch?: TAL.FetchLike) => {
     const logs: [string, string][] = []
 
-    // Keeps each request in arrival order.
-    const fetch: TAL.FetchLike = async (path, init) => {
+    const bridge = session.bridge(fetch ?? (async (path, init) => {
         logs.push([path, init.body])
-    }
+    }))
 
     const output = () => undefined
 
-    return {logs, fetch, output}
+    return {logs, bridge, output}
 }
 
 const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms))
@@ -30,8 +29,8 @@ const FAILURE = JSON.stringify({type: "session:end", data: {success: false}})
 describe(TITLE, {timeout: 1000}, () => {
     it("posts begin first, then the streams, then end, in order", async () => {
         const {session} = createTAL()
-        const {logs, fetch, output} = testStub()
-        session.session({fetch, output})
+        const {logs, bridge, output} = testStub(session)
+        session.session({bridge, output})
         session.stdout.write("one\n")
         session.stderr.write("warned\n")
         session.stdout.write("two\n")
@@ -46,8 +45,8 @@ describe(TITLE, {timeout: 1000}, () => {
 
     it("gathers a burst of lines into one request per stream", async () => {
         const {session} = createTAL()
-        const {logs, fetch, output} = testStub()
-        session.session({fetch, output})
+        const {logs, bridge, output} = testStub(session)
+        session.session({bridge, output})
         for (let i = 0; i < 100; i++) session.stdout.write(`line ${i}\n`)
         await session.end()
 
@@ -59,8 +58,8 @@ describe(TITLE, {timeout: 1000}, () => {
 
     it("flushes on its own while the run goes on", async () => {
         const {session} = createTAL()
-        const {logs, fetch, output} = testStub()
-        session.session({fetch, output})
+        const {logs, bridge, output} = testStub(session)
+        session.session({bridge, output})
         session.stdout.write("early\n")
         await sleep(200)
         assert.deepEqual(logs[0], ["send", BEGIN])
@@ -75,8 +74,8 @@ describe(TITLE, {timeout: 1000}, () => {
 
     it("sends the run's verdict: false once a test failed", async () => {
         const {session, test} = createTAL()
-        const {logs, fetch, output} = testStub()
-        session.session({fetch, output})
+        const {logs, bridge, output} = testStub(session)
+        session.session({bridge, output})
         test.it("fails", () => {
             throw new Error("no")
         })
@@ -86,8 +85,8 @@ describe(TITLE, {timeout: 1000}, () => {
 
     it("sends text as given", async () => {
         const {session} = createTAL()
-        const {logs, fetch, output} = testStub()
-        session.session({fetch, output})
+        const {logs, bridge, output} = testStub(session)
+        session.session({bridge, output})
         session.stderr.write("as ")
         session.stderr.write("given\n")
         await session.end()
@@ -98,10 +97,10 @@ describe(TITLE, {timeout: 1000}, () => {
 
     it("text written before session() goes out once the session is open", async () => {
         const {session} = createTAL()
-        const {logs, fetch, output} = testStub()
+        const {logs, bridge, output} = testStub(session)
         session.stdout.write("early\n")
         session.stderr.write("warned\n")
-        session.session({fetch, output})
+        session.session({bridge, output})
         await session.end()
 
         assert.deepEqual(logs[0], ["stdout", "early\n"])
@@ -112,24 +111,24 @@ describe(TITLE, {timeout: 1000}, () => {
 
     it("does not reject when the fetch does", async () => {
         const {session} = createTAL()
-        const {output} = testStub()
-        const fetch: TAL.FetchLike = async () => {
+        const {bridge, output} = testStub(session, async () => {
             throw new TypeError("fetch failed")
-        }
-        session.session({fetch, output})
+        })
+        session.session({bridge, output})
         session.stdout.write("lost\n")
+        session.stderr.write("still lost\n")
         assert.equal((await session.end()).success, true)
     })
 
     it("text written after end() waits for the next session", async () => {
         const {session} = createTAL()
-        const {logs, fetch, output} = testStub()
-        session.session({fetch, output})
+        const {logs, bridge, output} = testStub(session)
+        session.session({bridge, output})
         await session.end()
         session.stdout.write("later\n")
         assert.equal(logs.length, 2)
 
-        session.session({fetch, output})
+        session.session({bridge, output})
         await session.end()
         assert.deepEqual(logs[2], ["stdout", "later\n"])
         assert.deepEqual(logs[3], ["send", BEGIN])
@@ -138,7 +137,8 @@ describe(TITLE, {timeout: 1000}, () => {
 
     // A console of the test's own stands in for the page's.
     it("takes a console: log to stdout, error to stderr, a call a line, and gives it back at the end", async () => {
-        const {logs, fetch, output} = testStub()
+        const {session} = createTAL()
+        const {logs, bridge, output} = testStub(session)
         const fake = {
             debug: (..._: unknown[]) => undefined,
             log: (..._: unknown[]) => undefined,
@@ -147,8 +147,7 @@ describe(TITLE, {timeout: 1000}, () => {
             error: (..._: unknown[]) => undefined,
         }
         const {log, warn} = fake
-        const {session} = createTAL()
-        session.session({fetch, output, console: fake})
+        session.session({bridge, output, console: fake})
         assert.notEqual(fake.log, log)
         fake.log("a", 1, "b")
         fake.info("info")

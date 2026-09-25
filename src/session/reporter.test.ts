@@ -77,7 +77,7 @@ describe(TITLE, {timeout: 1000}, () => {
         const failure = new Error("reporter failed")
         const posts: string[] = []
         local.session.session({
-            fetch: async path => void posts.push(path),
+            bridge: local.session.bridge(async path => void posts.push(path)),
             output: () => undefined,
             reporter: async function* (source) {
                 for await (const _event of source) throw failure

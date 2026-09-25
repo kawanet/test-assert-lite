@@ -2,4 +2,4 @@
 // ending it, from the shared harness. No default: node has no such module.
 import {sharedTAL} from "test-assert-lite"
 
-export const {end, load, session, stdout, stderr} = sharedTAL.session
+export const {end, load, session, stdout, stderr, bridge} = sharedTAL.session
