@@ -15,7 +15,7 @@ const testStub = (session: TAL.SessionAPI, fetch?: TAL.FetchLike) => {
         logs.push([path, init.body])
     }
 
-    const bridge = session.bridge({fetch})
+    const bridge = session.ipc({fetch})
 
     const output = () => undefined
 
