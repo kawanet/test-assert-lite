@@ -5,8 +5,7 @@
 import type {TAL} from "test-assert-lite"
 import type {Run} from "../suite/job.ts"
 import {createConnectWriter, pureWriter} from "../utils/buf-writer.ts"
-import type {RunServices} from "../utils/run-services.ts"
-import {createRunServices} from "../utils/run-services.ts"
+import {type RunServices, createRunServices, getProcess} from "../utils/run-services.ts"
 import {bufferedBridge, clientFromBridge} from "./client.ts"
 import {consoleWriters, saveConsole, takeConsole} from "./console.ts"
 import type {ReportStream} from "./report-stream.ts"
@@ -50,33 +49,32 @@ export interface Sessions {
     schedule: () => void
 }
 
-const hasProcess = (): boolean => "undefined" !== typeof process && process.stdout?.write != null
-
 export const createSessions = (harness: HarnessState, assert: TAL.TestContextAssert): Sessions => {
     let cycle: Cycle | null = null
     const stdout = createConnectWriter()
     const stderr = createConnectWriter()
 
     const open = (options: TAL.SessionOptions, auto: boolean): Cycle => {
+        const {console} = options
         const reporter = chooseReporter(harness, options)
         // The report goes where the console goes unless told otherwise.
         const output = options.output ?? ((text: string) => stdout.write(text))
         // Saved before anything is taken over, so nothing here loops back.
-        const found = options.console ?? globalThis.console
+        const found = console ?? globalThis.console
         const saved = saveConsole(found)
         // The run's text goes to the CLI, to Node's streams, or to the console as found.
         const bridge = options.bridge == null ? null : clientFromBridge(bufferedBridge(options.bridge))
         const services = createRunServices(
-            bridge != null ? {stdout: bridge.stdout, stderr: bridge.stderr}
-                : hasProcess() ? {}
-                    : consoleWriters(found, saved),
+            bridge ??
+            getProcess() ??
+            (console ? undefined : consoleWriters(found, saved)),
         )
         // Taken before the reporter starts, since it refuses what is not a window or a process.
         const releaseUncaught = options.uncaught == null ? null : takeUncaught(harness, options.uncaught)
         // Registered first, so the report closes before the writers disconnect.
         const report = createReportStream({reporter, output, services})
         if (releaseUncaught != null) services.onCleanup(releaseUncaught)
-        if (options.console != null) services.onCleanup(takeConsole(found, saved, services.stdout, services.stderr))
+        if (console) services.onCleanup(takeConsole(found, saved, services.stdout, services.stderr))
         stdout.connect(services.stdout)
         stderr.connect(services.stderr)
         services.onCleanup(() => {

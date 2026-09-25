@@ -28,15 +28,17 @@ export interface RunServicesOptions {
 
 const nullWriter: TAL.Writer = {write: (() => undefined)}
 
-const hasProcess = (): boolean => "undefined" !== typeof process && process.stdout?.write != null
+const hasProcess = (): boolean => "undefined" !== typeof process && "function" === typeof process.stdout?.write
+
+export const getProcess = (): RunServicesOptions | undefined => hasProcess() ? process : undefined
 
 /** Creates the services of one run, on either side of the channel. */
 export const createRunServices = (options: RunServicesOptions = {}): RunServices => {
     const services = {} as RunServices
 
-    const P: RunServicesOptions = hasProcess() ? process : {}
-    services.stdout = options.stdout ?? P.stdout ?? nullWriter
-    services.stderr = options.stderr ?? P.stderr ?? nullWriter
+    const P = getProcess()
+    services.stdout = options.stdout ?? P?.stdout ?? nullWriter
+    services.stderr = options.stderr ?? P?.stderr ?? nullWriter
 
     const showError = (e: unknown): void => {
         services.stderr.write(`${stringify(e)}\n`)
