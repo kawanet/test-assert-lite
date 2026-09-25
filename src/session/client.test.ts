@@ -37,11 +37,11 @@ describe(TITLE, {timeout: 1000}, () => {
         session.stdout.write("two\n")
         await session.end()
 
-        assert.deepEqual(logs.shift(), ["ipcout", BEGIN])
+        assert.deepEqual(logs.shift(), ["send", BEGIN])
         assert.deepEqual(logs.shift(), ["stdout", "one\n"])
         assert.deepEqual(logs.shift(), ["stderr", "warned\n"])
         assert.deepEqual(logs.shift(), ["stdout", "two\n"])
-        assert.deepEqual(logs.shift(), ["ipcout", SUCCESS])
+        assert.deepEqual(logs.shift(), ["send", SUCCESS])
     })
 
     it("gathers a burst of lines into one request per stream", async () => {
@@ -51,10 +51,10 @@ describe(TITLE, {timeout: 1000}, () => {
         for (let i = 0; i < 100; i++) session.stdout.write(`line ${i}\n`)
         await session.end()
 
-        assert.deepEqual(logs[0], ["ipcout", BEGIN])
+        assert.deepEqual(logs[0], ["send", BEGIN])
         assert.equal(logs[1]?.[0], "stdout")
         assert.equal((logs[1]?.[1] ?? "").split("\n").length - 1, 100)
-        assert.deepEqual(logs[2], ["ipcout", SUCCESS])
+        assert.deepEqual(logs[2], ["send", SUCCESS])
     })
 
     it("flushes on its own while the run goes on", async () => {
@@ -63,14 +63,14 @@ describe(TITLE, {timeout: 1000}, () => {
         session.session({fetch, output})
         session.stdout.write("early\n")
         await sleep(200)
-        assert.deepEqual(logs[0], ["ipcout", BEGIN])
+        assert.deepEqual(logs[0], ["send", BEGIN])
         assert.deepEqual(logs[1], ["stdout", "early\n"])
 
         session.stdout.write("late\n")
         await session.end()
         assert.equal(logs.length, 4)
         assert.deepEqual(logs[2], ["stdout", "late\n"])
-        assert.deepEqual(logs[3], ["ipcout", SUCCESS])
+        assert.deepEqual(logs[3], ["send", SUCCESS])
     })
 
     it("sends the run's verdict: false once a test failed", async () => {
@@ -81,7 +81,7 @@ describe(TITLE, {timeout: 1000}, () => {
             throw new Error("no")
         })
         await session.end()
-        assert.deepEqual(logs.at(-1), ["ipcout", FAILURE])
+        assert.deepEqual(logs.at(-1), ["send", FAILURE])
     })
 
     it("sends text as given", async () => {
@@ -106,8 +106,8 @@ describe(TITLE, {timeout: 1000}, () => {
 
         assert.deepEqual(logs[0], ["stdout", "early\n"])
         assert.deepEqual(logs[1], ["stderr", "warned\n"])
-        assert.deepEqual(logs[2], ["ipcout", BEGIN])
-        assert.deepEqual(logs[3], ["ipcout", SUCCESS])
+        assert.deepEqual(logs[2], ["send", BEGIN])
+        assert.deepEqual(logs[3], ["send", SUCCESS])
     })
 
     it("does not reject when the fetch does", async () => {
@@ -132,8 +132,8 @@ describe(TITLE, {timeout: 1000}, () => {
         session.session({fetch, output})
         await session.end()
         assert.deepEqual(logs[2], ["stdout", "later\n"])
-        assert.deepEqual(logs[3], ["ipcout", BEGIN])
-        assert.deepEqual(logs[4], ["ipcout", SUCCESS])
+        assert.deepEqual(logs[3], ["send", BEGIN])
+        assert.deepEqual(logs[4], ["send", SUCCESS])
     })
 
     // A console of the test's own stands in for the page's.
@@ -159,12 +159,12 @@ describe(TITLE, {timeout: 1000}, () => {
         assert.equal(fake.log, log)
         assert.equal(fake.warn, warn)
 
-        assert.deepEqual(logs[0], ["ipcout", BEGIN])
+        assert.deepEqual(logs[0], ["send", BEGIN])
         assert.deepEqual(logs[1], ["stdout", "a 1 b\ninfo\ndebug\n"])
         assert.equal(logs[2]?.[0], "stderr")
         const lines = (logs[2]?.[1] ?? "").split("\n")
         assert.equal(lines[0], "warned")
         assert.match(lines[1] ?? "", /^TypeError: typed/)
-        assert.deepEqual(logs[3], ["ipcout", SUCCESS])
+        assert.deepEqual(logs[3], ["send", SUCCESS])
     })
 })

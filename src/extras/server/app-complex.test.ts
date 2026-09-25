@@ -30,7 +30,7 @@ const get = async (url: string): Promise<{status: number, type: string, body: st
 
 const post = async (url: string, body: string): Promise<number> => (await fetch(url, {method: "POST", body})).status
 
-const postIPC = async (url: string, message: TAL.SessionEvent): Promise<number> => post(url, JSON.stringify(message))
+const send = async (url: string, message: TAL.SessionEvent): Promise<number> => post(url, JSON.stringify(message))
 
 const nullWriter: TAL.Writer = {write: (() => undefined)}
 
@@ -173,13 +173,13 @@ describe(TITLE, () => {
 
     it("takes the run's reports by POST under its path, and the verdict from end", async () => {
         const run = app.page.slice(0, -"run.html".length)
-        assert.equal(await postIPC(url(`${run}ipcout`), BEGIN), 204)
+        assert.equal(await send(url(`${run}send`), BEGIN), 204)
         assert.equal(await post(url(`${run}stdout`), "one\n"), 204)
         assert.equal(stdout.read(), "one\n")
         assert.equal((await get(url(`${run}stdout`))).status, 405)
         assert.equal(await post(url(`${run}nothing`), ""), 404)
         assert.equal(await post(url("/index.html"), ""), 405)
-        assert.equal(await postIPC(url(`${run}ipcout`), SUCCESS), 204)
+        assert.equal(await send(url(`${run}send`), SUCCESS), 204)
         assert.equal((await sharedServices.finished)?.success, true)
     })
 })

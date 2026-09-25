@@ -86,7 +86,7 @@ describe(TITLE, {timeout: 1000}, () => {
         local.test.it("one", () => undefined)
 
         assert.equal(await caught(local.session.end()), failure)
-        assert.deepEqual(posts, ["ipcout", "ipcout"])
+        assert.deepEqual(posts, ["send", "send"])
     })
 
     it("preserves an undefined reporter rejection reason", async () => {

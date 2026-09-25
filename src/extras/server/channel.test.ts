@@ -32,7 +32,7 @@ const post = async (channel: Channel, endpoint: string, body: string, method = "
     return res?.status
 }
 
-const postIPC = async (channel: Channel, endpoint: "ipcout", message: TAL.SessionEvent, method?: string, path?: string) => post(channel, endpoint, JSON.stringify(message), method, path)
+const send = async (channel: Channel, endpoint: "send", message: TAL.SessionEvent, method?: string, path?: string) => post(channel, endpoint, JSON.stringify(message), method, path)
 
 describe(TITLE, {timeout: 1000}, () => {
     it("takes each report by POST under the given prefix", async () => {
@@ -40,10 +40,10 @@ describe(TITLE, {timeout: 1000}, () => {
         const stderr = createBufWriter()
         const services = createRunServices({stdout, stderr})
         const run = createChannel({prefix, services})
-        assert.equal(await postIPC(run, "ipcout", BEGIN), 204)
+        assert.equal(await send(run, "send", BEGIN), 204)
         assert.equal(await post(run, "stdout", "one\n"), 204)
         assert.equal(await post(run, "stderr", "warned\n"), 204)
-        assert.equal(await postIPC(run, "ipcout", SUCCESS), 204)
+        assert.equal(await send(run, "send", SUCCESS), 204)
         assert.equal(stdout.read(), "one\n")
         assert.equal(stderr.read(), "warned\n")
         assert.equal((await services.finished)?.success, true)
@@ -55,7 +55,7 @@ describe(TITLE, {timeout: 1000}, () => {
         const run = createChannel({prefix, services})
         assert.equal(await post(run, "stdout", "", "GET"), 405)
         assert.equal(await post(run, "nothing", ""), "next")
-        assert.equal(await postIPC(run, "ipcout", SUCCESS, "POST", otherPrefix), "next")
+        assert.equal(await send(run, "send", SUCCESS, "POST", otherPrefix), "next")
         await services.cleanup()
     })
 
@@ -64,7 +64,7 @@ describe(TITLE, {timeout: 1000}, () => {
         const stderr = createBufWriter()
         const services = createRunServices({stdout, stderr})
         const run = createChannel({prefix, services})
-        assert.equal(await postIPC(run, "ipcout", INVALID), 400)
+        assert.equal(await send(run, "send", INVALID), 400)
         await services.cleanup()
     })
 
@@ -79,7 +79,7 @@ describe(TITLE, {timeout: 1000}, () => {
     it("fails the run when a page that has begun falls silent", async () => {
         const services = createRunServices({stdout: nullWriter, stderr: nullWriter})
         const run = createChannel({prefix, services, timeout: 50})
-        assert.equal(await postIPC(run, "ipcout", BEGIN), 204)
+        assert.equal(await send(run, "send", BEGIN), 204)
         await assert.rejects(services.finished, /No word from the page/)
         await services.cleanup()
     })
@@ -87,8 +87,8 @@ describe(TITLE, {timeout: 1000}, () => {
     it("keeps the bound after a report it refused", async () => {
         const services = createRunServices({stdout: nullWriter, stderr: nullWriter})
         const run = createChannel({prefix, services, timeout: 50})
-        assert.equal(await postIPC(run, "ipcout", BEGIN), 204)
-        assert.equal(await postIPC(run, "ipcout", INVALID), 400)
+        assert.equal(await send(run, "send", BEGIN), 204)
+        assert.equal(await send(run, "send", INVALID), 400)
         await assert.rejects(services.finished, /No word from the page/)
         await services.cleanup()
     })
@@ -109,7 +109,7 @@ describe(TITLE, {timeout: 1000}, () => {
         const stderr = createBufWriter()
         const services = createRunServices({stdout, stderr})
         const run = createChannel({prefix, services})
-        assert.equal(await postIPC(run, "ipcout", SUCCESS), 204)
+        assert.equal(await send(run, "send", SUCCESS), 204)
         assert.equal((await services.finished)?.success, true)
         assert.equal(await post(run, "stdout", "after end 1\n"), 204)
         assert.equal(await post(run, "stderr", "after end 2\n"), 204)

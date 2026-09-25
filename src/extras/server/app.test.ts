@@ -19,7 +19,7 @@ const get = async (url: string): Promise<{status: number, type: string, body: st
 
 const post = async (url: string, body: string): Promise<number> => (await fetch(url, {method: "POST", body})).status
 
-const postIPC = async (url: string, message: TAL.SessionEvent): Promise<number> => post(url, JSON.stringify(message))
+const send = async (url: string, message: TAL.SessionEvent): Promise<number> => post(url, JSON.stringify(message))
 
 const nullWriter: TAL.Writer = {write: (() => undefined)}
 
@@ -177,7 +177,7 @@ describe(TITLE, () => {
         const files = [join(dir, "tests", "my suite.mjs")]
         const other = createApp({session: {files}, services})
         const running = await serve({handler: other.handler, services})
-        const endpoint = running.origin + other.page.replace(/run\.html$/, "ipcout")
+        const endpoint = running.origin + other.page.replace(/run\.html$/, "send")
         try {
             assert.equal(await post(endpoint, "BROKEN"), 400)
             assert.equal(await post(endpoint, "null"), 400)
@@ -204,9 +204,9 @@ describe(TITLE, () => {
             assert.ok(page.includes("/@tal/watch?after="))
             assert.ok(page.includes("})(0)\n</script>"))
 
-            const endpoint = running.origin + watching.page.replace(/run\.html$/, "ipcout")
-            assert.equal(await postIPC(endpoint, {type: "session:begin"}), 204)
-            assert.equal(await postIPC(endpoint, {type: "session:end", data: {success: true}}), 204)
+            const endpoint = running.origin + watching.page.replace(/run\.html$/, "send")
+            assert.equal(await send(endpoint, {type: "session:begin"}), 204)
+            assert.equal(await send(endpoint, {type: "session:end", data: {success: true}}), 204)
 
             const pending = get(running.origin + "/@tal/watch?after=0")
             await writeFile(file, "export const watching = 2")

@@ -327,14 +327,14 @@ export declare namespace TAL {
     interface BridgeAPI {
         stdout: (chunk: string) => Promise<unknown>
         stderr: (chunk: string) => Promise<unknown>
-        ipcout: (message: SessionEvent) => Promise<unknown>
+        send: (message: SessionEvent) => Promise<unknown>
     }
 
     type SessionEvent =
         | {type: "session:begin", data?: undefined}
         | {type: "session:end", data: SessionResult}
 
-    type BridgeChannel = "stdout" | "stderr" | "ipcout"
+    type BridgeChannel = "stdout" | "stderr" | "send"
 
     // --- harness ---
 

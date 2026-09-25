@@ -79,7 +79,7 @@ export const createChannel = ({prefix, services, timeout, singleRun = true}: Cha
     const channels: Record<TAL.BridgeChannel, (body: string) => undefined | number> = {
         stdout: (body) => void services.stdout.write(body),
         stderr: (body) => void services.stderr.write(body),
-        ipcout: <T extends SessionEventType>(body: string) => {
+        send: <T extends SessionEventType>(body: string) => {
             try {
                 const message = body ? JSON.parse(body) as TAL.SessionEvent : undefined
                 if (!isSessionEvent(message)) return 400

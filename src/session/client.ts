@@ -115,10 +115,10 @@ export const bufferClient = (client: SessionClient): SessionClient => {
 
 const bridgeToClient = (bridge: TAL.BridgeAPI): SessionClient => {
     return {
-        begin: () => bridge.ipcout({type: "session:begin"}).then(NOP, NOP),
+        begin: () => bridge.send({type: "session:begin"}).then(NOP, NOP),
         stdout: {write: (chunk) => bridge.stdout(chunk).catch(NOP)},
         stderr: {write: (chunk) => bridge.stderr(chunk).catch(NOP)},
-        end: (data) => bridge.ipcout({type: "session:end", data}).then(NOP, NOP),
+        end: (data) => bridge.send({type: "session:end", data}).then(NOP, NOP),
     }
 }
 
@@ -134,7 +134,7 @@ export const inOrderBridge = (bridge: TAL.BridgeAPI): TAL.BridgeAPI => {
     return {
         stdout: chunk => chain(() => bridge.stdout(chunk)),
         stderr: chunk => chain(() => bridge.stderr(chunk)),
-        ipcout: message => chain(() => bridge.ipcout(message)),
+        send: message => chain(() => bridge.send(message)),
     }
 }
 
@@ -142,6 +142,6 @@ export const fetchToBridge = (fetch: FetchLike): TAL.BridgeAPI => {
     return {
         stdout: chunk => fetch("stdout", {method: "POST", body: chunk}),
         stderr: chunk => fetch("stderr", {method: "POST", body: chunk}),
-        ipcout: message => fetch("ipcout", {method: "POST", body: JSON.stringify(message)}),
+        send: message => fetch("send", {method: "POST", body: JSON.stringify(message)}),
     }
 }
