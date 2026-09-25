@@ -317,7 +317,7 @@ export declare namespace TAL {
         stdout: Writer
         stderr: Writer
         /** Builds a bridge object with fetch API */
-        bridge: (fetch: FetchLike) => SessionBridge
+        bridge: (options: {fetch: FetchLike}) => SessionBridge
     }
 
     // --- session bridge ---

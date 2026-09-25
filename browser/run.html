@@ -18,7 +18,7 @@
     // it takes the window's errors outside the tests, and the console goes
     // the same way.
     session({
-        bridge: bridge(fetch),
+        bridge: bridge({fetch}),
         uncaught: window,
         console: console,
         reporter: options.reporter,

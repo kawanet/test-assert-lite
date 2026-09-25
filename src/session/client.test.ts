@@ -11,9 +11,11 @@ const TITLE = "session/client.test.ts"
 const testStub = (session: TAL.SessionAPI, fetch?: TAL.FetchLike) => {
     const logs: [string, string][] = []
 
-    const bridge = session.bridge(fetch ?? (async (path, init) => {
+    fetch ??= async (path, init) => {
         logs.push([path, init.body])
-    }))
+    }
+
+    const bridge = session.bridge({fetch})
 
     const output = () => undefined
 
