@@ -313,9 +313,6 @@ export declare namespace TAL {
         load(file: string): Promise<void>
         /** Runs every registered test, and closes the session. */
         end(): Promise<SessionResult>
-        /** The console of the session */
-        stdout: Writer
-        stderr: Writer
         /** Builds a bridge object with fetch API */
         ipc: (options: {fetch: FetchLike}) => SessionBridge
     }

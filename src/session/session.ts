@@ -4,9 +4,8 @@
 
 import type {TAL} from "test-assert-lite"
 import type {Run} from "../suite/job.ts"
-import {createConnectWriter, pureWriter} from "../utils/buf-writer.ts"
 import {type RunServices, createRunServices, getProcess} from "../utils/run-services.ts"
-import {bufferedBridge, clientFromBridge} from "./client.ts"
+import {clientFromBridge} from "./client.ts"
 import {consoleWriters, saveConsole, takeConsole} from "./console.ts"
 import type {ReportStream} from "./report-stream.ts"
 import {createReportStream} from "./report-stream.ts"
@@ -42,8 +41,6 @@ interface Cycle {
 export interface Sessions {
     session: TAL.SessionAPI["session"]
     end: TAL.SessionAPI["end"]
-    stdout: TAL.SessionAPI["stdout"]
-    stderr: TAL.SessionAPI["stderr"]
     // Called on a declaration at the root: starts the walk, once end() has
     // let it, unless one is under way.
     schedule: () => void
@@ -51,36 +48,28 @@ export interface Sessions {
 
 export const createSessions = (harness: HarnessState, assert: TAL.TestContextAssert): Sessions => {
     let cycle: Cycle | null = null
-    const stdout = createConnectWriter()
-    const stderr = createConnectWriter()
 
     const open = (options: TAL.SessionOptions, auto: boolean): Cycle => {
         const {console} = options
         const reporter = chooseReporter(harness, options)
-        // The report goes where the console goes unless told otherwise.
-        const output = options.output ?? ((text: string) => stdout.write(text))
         // Saved before anything is taken over, so nothing here loops back.
         const found = console ?? globalThis.console
         const saved = saveConsole(found)
         // The run's text goes to the CLI, to Node's streams, or to the console as found.
-        const bridge = options.bridge == null ? null : clientFromBridge(bufferedBridge(options.bridge))
+        const bridge = options.bridge == null ? null : clientFromBridge(options.bridge)
         const services = createRunServices(
             bridge ??
             getProcess() ??
             (console ? undefined : consoleWriters(found, saved)),
         )
+        // The report goes where the console goes unless told otherwise.
+        const output = options.output ?? ((text: string) => services.stdout.write(text))
         // Taken before the reporter starts, since it refuses what is not a window or a process.
         const releaseUncaught = options.uncaught == null ? null : takeUncaught(harness, options.uncaught)
         // Registered first, so the report closes before the writers disconnect.
         const report = createReportStream({reporter, output, services})
         if (releaseUncaught != null) services.onCleanup(releaseUncaught)
         if (console) services.onCleanup(takeConsole(found, saved, services.stdout, services.stderr))
-        stdout.connect(services.stdout)
-        stderr.connect(services.stderr)
-        services.onCleanup(() => {
-            stdout.disconnect()
-            stderr.disconnect()
-        })
         void bridge?.begin()
 
         // emit() is normally awaited, but TestContext.diagnostic() is
@@ -162,7 +151,7 @@ export const createSessions = (harness: HarnessState, assert: TAL.TestContextAss
         return await services.finished
     }
 
-    return {session, end, stdout: pureWriter(stdout), stderr: pureWriter(stderr), schedule}
+    return {session, end, schedule}
 }
 
 // What the run came to: the counts, the time and the verdict.

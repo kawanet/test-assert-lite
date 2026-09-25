@@ -33,9 +33,9 @@ describe(TITLE, {timeout: 1000}, () => {
         const {session} = createTAL()
         const {logs, bridge, output} = testStub(session)
         session.session({bridge, output})
-        session.stdout.write("one\n")
-        session.stderr.write("warned\n")
-        session.stdout.write("two\n")
+        bridge.stdout.write("one\n")
+        bridge.stderr.write("warned\n")
+        bridge.stdout.write("two\n")
         await session.end()
 
         assert.deepEqual(logs.shift(), ["send", BEGIN])
@@ -49,12 +49,15 @@ describe(TITLE, {timeout: 1000}, () => {
         const {session} = createTAL()
         const {logs, bridge, output} = testStub(session)
         session.session({bridge, output})
-        for (let i = 0; i < 100; i++) session.stdout.write(`line ${i}\n`)
+        for (let i = 0; i < 100; i++) bridge.stdout.write(`line ${i}\n`)
         await session.end()
 
         assert.deepEqual(logs[0], ["send", BEGIN])
         assert.equal(logs[1]?.[0], "stdout")
-        assert.equal((logs[1]?.[1] ?? "").split("\n").length - 1, 100)
+        const lines = logs[1]?.[1]?.split(/(?<=\n)(?=\S)/) ?? []
+        assert.equal(lines.length, 100)
+        assert.equal(lines.at(0), "line 0\n")
+        assert.equal(lines.at(-1), "line 99\n")
         assert.deepEqual(logs[2], ["send", SUCCESS])
     })
 
@@ -62,12 +65,12 @@ describe(TITLE, {timeout: 1000}, () => {
         const {session} = createTAL()
         const {logs, bridge, output} = testStub(session)
         session.session({bridge, output})
-        session.stdout.write("early\n")
+        bridge.stdout.write("early\n")
         await sleep(200)
         assert.deepEqual(logs[0], ["send", BEGIN])
         assert.deepEqual(logs[1], ["stdout", "early\n"])
 
-        session.stdout.write("late\n")
+        bridge.stdout.write("late\n")
         await session.end()
         assert.equal(logs.length, 4)
         assert.deepEqual(logs[2], ["stdout", "late\n"])
@@ -89,8 +92,8 @@ describe(TITLE, {timeout: 1000}, () => {
         const {session} = createTAL()
         const {logs, bridge, output} = testStub(session)
         session.session({bridge, output})
-        session.stderr.write("as ")
-        session.stderr.write("given\n")
+        bridge.stderr.write("as ")
+        bridge.stderr.write("given\n")
         await session.end()
 
         const lines = (logs[1]?.[1] ?? "").split("\n")
@@ -100,8 +103,8 @@ describe(TITLE, {timeout: 1000}, () => {
     it("text written before session() goes out once the session is open", async () => {
         const {session} = createTAL()
         const {logs, bridge, output} = testStub(session)
-        session.stdout.write("early\n")
-        session.stderr.write("warned\n")
+        bridge.stdout.write("early\n")
+        bridge.stderr.write("warned\n")
         session.session({bridge, output})
         await session.end()
 
@@ -117,8 +120,8 @@ describe(TITLE, {timeout: 1000}, () => {
             throw new TypeError("fetch failed")
         })
         session.session({bridge, output})
-        session.stdout.write("lost\n")
-        session.stderr.write("still lost\n")
+        bridge.stdout.write("lost\n")
+        bridge.stderr.write("still lost\n")
         assert.equal((await session.end()).success, true)
     })
 
@@ -127,7 +130,7 @@ describe(TITLE, {timeout: 1000}, () => {
         const {logs, bridge, output} = testStub(session)
         session.session({bridge, output})
         await session.end()
-        session.stdout.write("later\n")
+        bridge.stdout.write("later\n")
         assert.equal(logs.length, 2)
 
         session.session({bridge, output})

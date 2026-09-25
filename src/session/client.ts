@@ -81,7 +81,7 @@ export const clientFromBridge = (client: TAL.SessionBridge): BridgeClient => {
     }
 }
 
-export const bufferedBridge = (client: TAL.SessionBridge): TAL.SessionBridge => {
+const bufferedBridge = (client: TAL.SessionBridge): TAL.SessionBridge => {
     const stdout = delayedBufWriter(client.stdout, FLUSH_MS)
     const stderr = delayedBufWriter(client.stderr, FLUSH_MS)
 
@@ -107,8 +107,10 @@ export const bufferedBridge = (client: TAL.SessionBridge): TAL.SessionBridge => 
 }
 
 export const bridgeFromFetch = (fetch: TAL.FetchLike): TAL.SessionBridge => {
-    const bridge = ipcFromFetch(fetch)
+    return bufferedBridge(inOrderBridge(ipcFromFetch(fetch)))
+}
 
+const inOrderBridge = (bridge: BridgeIPC): TAL.SessionBridge => {
     // Every request follows the one before, so each stream stays in order.
     let inflight: Promise<void> = Promise.resolve()
 
