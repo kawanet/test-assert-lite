@@ -324,7 +324,7 @@ export declare namespace TAL {
         stdout: Writer
         stderr: Writer
         /** IPC channel for SessionEvent */
-        send: (message: SessionEvent) => Promise<unknown>
+        send: (message: SessionEvent) => void
     }
 
     type SessionEvent =

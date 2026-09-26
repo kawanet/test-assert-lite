@@ -69,14 +69,14 @@ export const clientFromBridge = (client: TAL.BridgeAPI): BridgeClient => {
             last = Date.now()
             started ||= last
             alive ??= setInterval(tick, TICK_MS)
-            await client.send({type: "session:begin"})
+            client.send({type: "session:begin"})
         },
         stdout: onWrite(stdout, tack),
         stderr: onWrite(stderr, tack),
         end: async (data) => {
             if (alive != null) clearInterval(alive)
             alive = null
-            await client.send({type: "session:end", data})
+            client.send({type: "session:end", data})
         },
     }
 }
@@ -101,7 +101,7 @@ const bufferedBridge = (client: TAL.BridgeAPI): TAL.BridgeAPI => {
         send: (message) => {
             stdout.flush()
             stderr.flush()
-            return client.send(message)
+            client.send(message)
         },
     }
 }
@@ -122,7 +122,7 @@ const inOrderBridge = (bridge: BridgeIPC): TAL.BridgeAPI => {
     return {
         stdout: {write: (chunk) => void chain(() => bridge.stdout(chunk))},
         stderr: {write: (chunk) => void chain(() => bridge.stderr(chunk))},
-        send: (message) => chain(() => bridge.send(message)),
+        send: (message) => void chain(() => bridge.send(message)),
     }
 }
 
