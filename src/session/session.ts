@@ -56,9 +56,9 @@ export const createSessions = (harness: HarnessState, assert: TAL.TestContextAss
         const found = console ?? globalThis.console
         const saved = saveConsole(found)
         // The run's text goes to the CLI, to Node's streams, or to the console as found.
-        const bridge = options.bridge == null ? null : clientFromBridge(options.bridge)
+        const client = options.bridge == null ? null : clientFromBridge(options.bridge)
         const services = createRunServices(
-            bridge ??
+            client ??
             getProcess() ??
             (console ? undefined : consoleWriters(found, saved)),
         )
@@ -70,7 +70,6 @@ export const createSessions = (harness: HarnessState, assert: TAL.TestContextAss
         const report = createReportStream({reporter, output, services})
         if (releaseUncaught != null) services.onCleanup(releaseUncaught)
         if (console) services.onCleanup(takeConsole(found, saved, services.stdout, services.stderr))
-        void bridge?.begin()
 
         // emit() is normally awaited, but TestContext.diagnostic() is
         // deliberately synchronous. Mark every rejection handled here while
@@ -88,7 +87,9 @@ export const createSessions = (harness: HarnessState, assert: TAL.TestContextAss
             assert,
             closed: false,
         }
-        const close: Cycle["close"] = async (result) => bridge?.end(result)
+
+        void client?.begin()
+        const close: Cycle["close"] = async (result) => client?.end(result)
         return {services, report, close, auto, run, startedAt: performance.now(), held: true, walk: null, closing: false, failure: undefined}
     }
 

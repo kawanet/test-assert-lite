@@ -51,7 +51,7 @@ const onWrite = (writer: TAL.Writer, fn: () => void): TAL.Writer => {
 /**
  * Creates the page's bridge to the CLI through `begin`, `stdout`, `stderr` and `end`.
  */
-export const clientFromBridge = (client: TAL.SessionBridge): BridgeClient => {
+export const clientFromBridge = (client: TAL.BridgeAPI): BridgeClient => {
     let alive: ReturnType<typeof setInterval> | null = null
     let started = 0
     let last = 0
@@ -81,7 +81,7 @@ export const clientFromBridge = (client: TAL.SessionBridge): BridgeClient => {
     }
 }
 
-const bufferedBridge = (client: TAL.SessionBridge): TAL.SessionBridge => {
+const bufferedBridge = (client: TAL.BridgeAPI): TAL.BridgeAPI => {
     const stdout = delayedBufWriter(client.stdout, FLUSH_MS)
     const stderr = delayedBufWriter(client.stderr, FLUSH_MS)
 
@@ -106,11 +106,11 @@ const bufferedBridge = (client: TAL.SessionBridge): TAL.SessionBridge => {
     }
 }
 
-export const bridgeFromFetch = (fetch: TAL.FetchLike): TAL.SessionBridge => {
+export const bridgeFromFetch = (fetch: TAL.FetchLike): TAL.BridgeAPI => {
     return bufferedBridge(inOrderBridge(ipcFromFetch(fetch)))
 }
 
-const inOrderBridge = (bridge: BridgeIPC): TAL.SessionBridge => {
+const inOrderBridge = (bridge: BridgeIPC): TAL.BridgeAPI => {
     // Every request follows the one before, so each stream stays in order.
     let inflight: Promise<void> = Promise.resolve()
 

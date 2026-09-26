@@ -278,7 +278,7 @@ export declare namespace TAL {
         /** Where the formatted text goes; the session's `stdout` unless given. */
         output?: OutputFn
         /** Reports the run to the CLI, with this. Nothing is sent without it. */
-        bridge?: SessionBridge
+        bridge?: BridgeAPI
         /**
          * Takes the errors outside the tests, until end(): the uncaught
          * exceptions and unhandled rejections of the window or the process
@@ -314,12 +314,12 @@ export declare namespace TAL {
         /** Runs every registered test, and closes the session. */
         end(): Promise<SessionResult>
         /** Builds a bridge object with fetch API */
-        connect: (options: {fetch: FetchLike}) => SessionBridge
+        connect: (options: {fetch: FetchLike}) => BridgeAPI
     }
 
     // --- session bridge ---
 
-    interface SessionBridge {
+    interface BridgeAPI {
         /** The console of the session */
         stdout: Writer
         stderr: Writer
