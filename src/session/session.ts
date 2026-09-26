@@ -68,19 +68,10 @@ export const createSessions = (harness: HarnessState, assert: TAL.TestContextAss
         if (releaseUncaught != null) services.onCleanup(releaseUncaught)
         if (options.console) services.onCleanup(takeConsole(found, saved, services.stdout, services.stderr))
 
-        // emit() is normally awaited, but TestContext.diagnostic() is
-        // deliberately synchronous. Mark every rejection handled here while
-        // preserving it for awaiters.
-        const emit: Run["emit"] = (type, data) => {
-            const promise = report.write({type, data} as TAL.TestEvent)
-            void promise.catch(() => undefined)
-            return promise
-        }
-
         const run: Run = {
             counters: {tests: 0, suites: 0, passed: 0, failed: 0, cancelled: 0, skipped: 0, todo: 0},
             success: true,
-            emit,
+            emit: (type, data) => report.write({type, data} as TAL.TestEvent),
             assert,
             closed: false,
         }
