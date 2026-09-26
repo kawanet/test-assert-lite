@@ -57,7 +57,7 @@ export const createSessions = (harness: HarnessState, assert: TAL.TestContextAss
         const found = options.console ?? globalThis.console
         const saved = saveConsole(found)
         // The run's text goes to the CLI, to Node's streams, or to the console as found.
-        const client = options.bridge ? bridgeClient(options.bridge) : defaultClient(options.console ? undefined : consoleWriters(found, saved))
+        const client = options.bridge ? bridgeClient(options.bridge) : defaultClient(consoleWriters(found, saved))
         const services = createRunServices(client)
         // The report goes where the console goes unless told otherwise.
         const output = options.output ?? ((text: string) => services.stdout.write(text))
