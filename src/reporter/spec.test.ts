@@ -104,6 +104,17 @@ describe(TITLE, () => {
         assert.match(out, /ℹ hello/)
     })
 
+    it("passes a test file's stdout and stderr through as they are", async () => {
+        const out = await render(async emit => {
+            await emit("test:stdout", {file: "a.mjs", message: "out\n"})
+            await emit("test:stderr", {file: "a.mjs", message: "Error: cause\n"})
+            await emit("test:pass", pass("one"))
+        })
+
+        assert.ok(out.startsWith("out\nError: cause\n"))
+        assert.match(out, /✔ one/)
+    })
+
     // emit() accepts any type, and an unknown one used to reach the branch
     // that reads details, where it crashed.
     it("ignores an event type it does not know", async () => {

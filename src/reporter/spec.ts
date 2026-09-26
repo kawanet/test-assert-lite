@@ -89,6 +89,12 @@ export const spec = (options?: TAL.SpecOptions): ReporterFn => {
                 continue
             }
 
+            // A test file's own output under node --test, as node's spec passes it.
+            if (event.type === "test:stdout" || event.type === "test:stderr") {
+                yield event.data.message
+                continue
+            }
+
             // node emits a summary per file, with `file`, and one for the run
             // without it; the list goes with the latter, as in node's spec.
             if (event.type === "test:summary") {

@@ -204,6 +204,18 @@ export declare namespace TAL {
         level: "info" | "warn" | "error"
     }
 
+    // What node --test relays from a test file's own streams. This
+    // package's runner emits neither.
+    interface TestStdout {
+        file: string
+        message: string
+    }
+
+    interface TestStderr {
+        file: string
+        message: string
+    }
+
     interface TestSummary {
         counts: {
             cancelled: number
@@ -223,6 +235,8 @@ export declare namespace TAL {
         | {type: "test:pass"; data: TestPass}
         | {type: "test:fail"; data: TestFail}
         | {type: "test:diagnostic"; data: TestDiagnostic}
+        | {type: "test:stdout"; data: TestStdout}
+        | {type: "test:stderr"; data: TestStderr}
         | {type: "test:summary"; data: TestSummary}
 
     // --- reporter ---

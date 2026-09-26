@@ -46,6 +46,15 @@ export const tap = (): ReporterFn => async function* (source: AsyncIterable<Test
             continue
         }
 
+        // A test file's own output under node --test: a comment a line, as
+        // node's TAP has it. An empty line has nothing to comment.
+        if (event.type === "test:stdout" || event.type === "test:stderr") {
+            for (const line of event.data.message.split(/\r?\n/)) {
+                if (line) yield `# ${escapeText(line)}\n`
+            }
+            continue
+        }
+
         // Under node --test the source carries more types than these, so
         // check for a result event rather than assuming one. test:summary and
         // an unknown type both fall through and are dropped, as node's are.

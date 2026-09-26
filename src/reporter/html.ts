@@ -47,6 +47,13 @@ export const html = (): ReporterFn => async function* (source: AsyncIterable<Tes
             continue
         }
 
+        // A test file's own output under node --test, as node's spec passes it.
+        if (event.type === "test:stdout" || event.type === "test:stderr") {
+            const stream = event.type.slice("test:".length)
+            yield $$`<div class="tal-r tal-${stream}"><pre>${event.data.message}</pre></div>\n`
+            continue
+        }
+
         // The run's summary carries no `file`; a per-file one from node does.
         if (event.type === "test:summary") {
             if (!("file" in event.data)) {

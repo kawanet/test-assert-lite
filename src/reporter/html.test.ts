@@ -57,6 +57,18 @@ describe(TITLE, () => {
         assert.ok(out.indexOf("failing tests:") < out.indexOf("✔ after"))
     })
 
+    it("renders a test file's stdout and stderr, escaped", async () => {
+        const out = await render(async emit => {
+            await emit("test:stdout", {file: "a.mjs", message: "<out>\n"})
+            await emit("test:stderr", {file: "a.mjs", message: "Error: cause\n"})
+            await emit("test:pass", pass("one"))
+        })
+
+        assert.ok(out.includes('<div class="tal-r tal-stdout"><pre>&lt;out&gt;\n</pre></div>'))
+        assert.ok(out.includes('<div class="tal-r tal-stderr"><pre>Error: cause\n</pre></div>'))
+        assert.match(out, /✔ one/)
+    })
+
     it("escapes text and failure details", async () => {
         const out = await render(async emit => {
             await emit("test:diagnostic", {message: `<&>"'`, nesting: 0, level: "warn"})

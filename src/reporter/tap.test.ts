@@ -85,6 +85,16 @@ describe(TITLE, () => {
         assert.match(out, /^ok 1 - s # SKIP why \\# not\\nhere$/m)
     })
 
+    it("turns a test file's stdout and stderr into comment lines, and drops empty ones", async () => {
+        const out = await render(async emit => {
+            await emit("test:stdout", {file: "a.mjs", message: "out\n\nmore\n"})
+            await emit("test:stderr", {file: "a.mjs", message: "Error: # cause\n"})
+            await emit("test:pass", pass("one"))
+        })
+
+        assert.ok(out.includes("# out\n# more\n# Error: \\# cause\nok 1 - one\n"))
+    })
+
     it("turns test:start into a suite comment", async () => {
         const out = await render(async emit => {
             await emit("test:start", {name: "S", nesting: 0})
