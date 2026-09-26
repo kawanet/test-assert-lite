@@ -63,7 +63,7 @@ export const createChannel = ({prefix, services, timeout, singleRun = true}: Cha
 
     const eventMap: SessionEventMap = {
         "session:begin": (data) => {
-            if (data) return 400
+            if (data != null) return 400
             begun = true
         },
         "session:end": (data) => {

@@ -73,12 +73,13 @@ export const bridgeClient = (client: TAL.BridgeAPI): BridgeClient => {
     const tick = (): void => {
         if (Date.now() - last < QUIET_MS) return
         stderr.write(`⏳ ${Math.round((Date.now() - started) / 1000)}s\n`)
+        tack()
     }
 
     return {
         begin: () => new Promise((resolve, reject) => {
-            last = Date.now()
-            started ||= last
+            if (alive != null) clearInterval(alive)
+            started = last = Date.now()
             alive ??= setInterval(tick, TICK_MS)
             client.send({type: "session:begin"}, (err) => (err ? reject(err) : resolve()))
         }),
@@ -127,7 +128,7 @@ const inOrderBridge = (bridge: BridgeIPC): TAL.BridgeAPI => {
 
     // Request failures are ignored. Later requests are still attempted.
     const chain = (fn: () => Promise<unknown>): Promise<unknown> => {
-        return inflight = inflight.finally(fn)
+        return inflight = inflight.catch(NOP).then(fn)
     }
 
     return {
