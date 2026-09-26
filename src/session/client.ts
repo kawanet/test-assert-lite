@@ -80,7 +80,7 @@ export const bridgeClient = (client: TAL.BridgeAPI): BridgeClient => {
         begin: () => new Promise((resolve, reject) => {
             if (alive != null) clearInterval(alive)
             started = last = Date.now()
-            alive ??= setInterval(tick, TICK_MS)
+            alive = setInterval(tick, TICK_MS)
             client.send({type: "session:begin"}, (err) => (err ? reject(err) : resolve()))
         }),
         stdout: onWrite(stdout, tack),
