@@ -314,7 +314,7 @@ export declare namespace TAL {
         /** Runs every registered test, and closes the session. */
         end(): Promise<SessionResult>
         /** Builds a bridge object with fetch API */
-        ipc: (options: {fetch: FetchLike}) => SessionBridge
+        connect: (options: {fetch: FetchLike}) => SessionBridge
     }
 
     // --- session bridge ---

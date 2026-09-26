@@ -76,7 +76,7 @@ describe(TITLE, {timeout: 1000}, () => {
         const local = createTAL()
         const failure = new Error("reporter failed")
         const posts: string[] = []
-        const bridge = local.session.ipc({fetch: async (path) => void posts.push(path)})
+        const bridge = local.session.connect({fetch: async (path) => void posts.push(path)})
         local.session.session({
             bridge,
             output: () => undefined,

@@ -29,12 +29,12 @@ export const createTAL: typeof declared.createTAL = () => {
         }
     }
 
-    const ipc: TAL.SessionAPI["ipc"] = ({fetch}) => bridgeFromFetch(fetch)
+    const connect: TAL.SessionAPI["connect"] = ({fetch}) => bridgeFromFetch(fetch)
 
     return {
         assert,
         reporter,
-        session: {session, load, end, ipc},
+        session: {connect, end, load, session},
         test: registrar,
     }
 }
