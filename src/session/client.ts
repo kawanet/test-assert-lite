@@ -5,8 +5,9 @@
 
 import type {TAL} from "test-assert-lite"
 import {delayedBufWriter} from "../utils/buf-writer.ts"
+import {getStreams, type RunServicesOptions} from "../utils/run-services.ts"
 
-interface BridgeClient {
+export interface BridgeClient {
     /** Tells the CLI the page is up; it waits for this with a timeout. */
     begin: () => Promise<void>
 
@@ -48,10 +49,20 @@ const onWrite = (writer: TAL.Writer, fn: () => void): TAL.Writer => {
     }
 }
 
+export const defaultClient = (defaults?: RunServicesOptions): BridgeClient => {
+    const {stdout, stderr} = getStreams(defaults)
+    return {
+        begin: NOP,
+        stdout,
+        stderr,
+        end: NOP,
+    }
+}
+
 /**
  * Creates the page's bridge to the CLI through `begin`, `stdout`, `stderr` and `end`.
  */
-export const clientFromBridge = (client: TAL.BridgeAPI): BridgeClient => {
+export const bridgeClient = (client: TAL.BridgeAPI): BridgeClient => {
     let alive: ReturnType<typeof setInterval> | null = null
     let started = 0
     let last = 0
