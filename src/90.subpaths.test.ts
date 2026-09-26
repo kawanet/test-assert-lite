@@ -53,9 +53,8 @@ test("test-assert-lite/session", () => {
     assert.equal(sessionEntry.session, sharedTAL.session.session)
     assert.equal(sessionEntry.load, sharedTAL.session.load)
     assert.equal(sessionEntry.end, sharedTAL.session.end)
-    assert.equal(sessionEntry.stdout, sharedTAL.session.stdout)
-    assert.equal(sessionEntry.stderr, sharedTAL.session.stderr)
-    assert.deepEqual(named(sessionEntry), ["end", "load", "session", "stderr", "stdout"])
+    assert.equal(sessionEntry.connect, sharedTAL.session.connect)
+    assert.deepEqual(named(sessionEntry), ["connect", "end", "load", "session"])
 })
 
 test("test-assert-lite/reporter/html", () => {

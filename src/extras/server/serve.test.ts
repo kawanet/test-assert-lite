@@ -14,6 +14,8 @@ import {serveStatic} from "./static.ts"
 
 const TITLE = "extras/server/serve.test.ts"
 
+const NEWLINE = /(?<=\n)(?=\S)/
+
 interface Reply {
     status: number
     type: string
@@ -276,17 +278,17 @@ describe(TITLE, () => {
     it("answers 500 when the chain throws, and logs the error", async () => {
         stderr.read()
         assert.equal((await get(server.origin, "/boom")).status, 500)
-        const lines = stderr.read().split(/(?<=\n)(?=\S)/)
-        assert.match(lines[0] ?? "", /^Error: boom\n/)
-        assert.match(lines[1] ?? "", /^GET \/boom 500 0 - /)
+        const lines = stderr.read().split(NEWLINE)
+        assert.match(lines.shift()!, /^Error: boom\n/)
+        assert.match(lines.shift()!, /^GET \/boom 500 0 - /)
     })
 
     it("answers 500 when the Response's body fails to be read, rather than hanging", async () => {
         stderr.read()
         assert.equal((await get(server.origin, "/broken")).status, 500)
-        const lines = stderr.read().split(/(?<=\n)(?=\S)/)
-        assert.match(lines[0] ?? "", /^Error: broken body\n/)
-        assert.match(lines[1] ?? "", /^GET \/broken 500 0 - /)
+        const lines = stderr.read().split(NEWLINE)
+        assert.match(lines.shift()!, /^Error: broken body\n/)
+        assert.match(lines.shift()!, /^GET \/broken 500 0 - /)
     })
 
     it("answers 400 to a target that is not a path, or a Host that is no host", async () => {
@@ -373,11 +375,11 @@ describe(TITLE, () => {
         } finally {
             await services.cleanup()
         }
-        const said = stderr.read().split(/(?<=\n)(?=\S)/)
-        assert.equal(said.length, 3)
-        assert.match(said[0] ?? "", /^GET \/missing\.html 404 0 - /)
-        assert.match(said[1] ?? "", /^Error: boom\n/)
-        assert.match(said[2] ?? "", /^GET \/boom 500 0 - /)
+        const lines = stderr.read().split(NEWLINE)
+        assert.match(lines.shift()!, /^GET \/missing\.html 404 0 - /)
+        assert.match(lines.shift()!, /^Error: boom\n/)
+        assert.match(lines.shift()!, /^GET \/boom 500 0 - /)
+        assert.equal(lines.length, 0)
     })
 
     it("logs one line per response, in morgan's tiny format", async () => {
@@ -385,10 +387,10 @@ describe(TITLE, () => {
         await get(server.origin, "/dist/lib.mjs")
         await get(server.origin, "/missing.html")
         await get(server.origin, "/dist/notes.txt")
-        const lines = stderr.read().split(/(?<=\n)(?=\S)/)
-        assert.equal(lines.length, 3)
-        assert.match(lines[0] ?? "", /^GET \/dist\/lib.mjs 200 20 - \d+\.\d+ ms/)
-        assert.match(lines[1] ?? "", /^GET \/missing.html 404 0 - \d+\.\d+ ms/)
-        assert.match(lines[2] ?? "", /^GET \/dist\/notes.txt 403 0 - \d+\.\d+ ms/)
+        const lines = stderr.read().split(NEWLINE)
+        assert.match(lines.shift()!, /^GET \/dist\/lib.mjs 200 20 - \d+\.\d+ ms/)
+        assert.match(lines.shift()!, /^GET \/missing.html 404 0 - \d+\.\d+ ms/)
+        assert.match(lines.shift()!, /^GET \/dist\/notes.txt 403 0 - \d+\.\d+ ms/)
+        assert.equal(lines.length, 0)
     })
 })

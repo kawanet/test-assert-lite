@@ -4,6 +4,7 @@ import {createAssert} from "./assert/assert.ts"
 import {html} from "./reporter/html.ts"
 import {spec} from "./reporter/spec.ts"
 import {tap} from "./reporter/tap.ts"
+import {bridgeFromFetch} from "./session/client.ts"
 import {createSessions} from "./session/session.ts"
 import {createHarnessState} from "./session/state.ts"
 import {createRegistrar} from "./suite/registrar.ts"
@@ -12,7 +13,7 @@ import {createRegistrar} from "./suite/registrar.ts"
 export const createTAL: typeof declared.createTAL = () => {
     const state = createHarnessState()
     const {assert, tca} = createAssert()
-    const {session, stdout, stderr, schedule, end} = createSessions(state, tca)
+    const {session, schedule, end} = createSessions(state, tca)
     const registrar = createRegistrar(state, schedule)
     const reporter: TAL.Reporter = {spec, tap, html}
 
@@ -27,10 +28,13 @@ export const createTAL: typeof declared.createTAL = () => {
             })
         }
     }
+
+    const connect: TAL.SessionAPI["connect"] = ({fetch}) => bridgeFromFetch(fetch)
+
     return {
         assert,
         reporter,
-        session: {session, load, end, stdout, stderr},
+        session: {connect, end, load, session},
         test: registrar,
     }
 }

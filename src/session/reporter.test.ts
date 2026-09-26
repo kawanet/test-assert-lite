@@ -15,7 +15,7 @@ const caught = async (promise: Promise<unknown>): Promise<unknown> => {
     }
 }
 
-describe(TITLE, () => {
+describe(TITLE, {timeout: 1000}, () => {
 
     it("rejects end() when the reporter throws", async () => {
         const local = createTAL()
@@ -76,8 +76,9 @@ describe(TITLE, () => {
         const local = createTAL()
         const failure = new Error("reporter failed")
         const posts: string[] = []
+        const bridge = local.session.connect({fetch: async (path) => void posts.push(path)})
         local.session.session({
-            fetch: async path => void posts.push(path),
+            bridge,
             output: () => undefined,
             reporter: async function* (source) {
                 for await (const _event of source) throw failure
@@ -86,7 +87,7 @@ describe(TITLE, () => {
         local.test.it("one", () => undefined)
 
         assert.equal(await caught(local.session.end()), failure)
-        assert.deepEqual(posts, ["begin", "end"])
+        assert.deepEqual(posts, ["send", "send"])
     })
 
     it("preserves an undefined reporter rejection reason", async () => {

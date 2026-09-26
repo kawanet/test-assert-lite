@@ -25,7 +25,9 @@ export interface Channel {
     handler: (c: ContextLike, next: Next) => Promise<Response | void>
 }
 
-type ChannelName = "begin" | "stdout" | "stderr" | "end"
+type SessionEventType = TAL.SessionEvent["type"]
+
+type SessionEventData<T extends SessionEventType> = Extract<TAL.SessionEvent, {type: T}>["data"]
 
 const isTestResult = (v: unknown): v is TAL.SessionResult => ("boolean" === typeof (v as TAL.SessionResult)?.success)
 
@@ -57,18 +59,33 @@ export const createChannel = ({prefix, services, timeout, singleRun = true}: Cha
         }, timeout)
     }
 
-    const channels: Record<ChannelName, (body: string) => undefined | number> = {
-        begin: () => {
+    type SessionEventMap = {[T in SessionEventType]: (body: SessionEventData<T>) => undefined | number}
+
+    const eventMap: SessionEventMap = {
+        "session:begin": (data) => {
+            if (data != null) return 400
             begun = true
         },
+        "session:end": (data) => {
+            if (!isTestResult(data)) return 400
+            if (singleRun) services.resolve(data)
+            ended = true
+        },
+    }
+
+    const eventTypes = Object.keys(eventMap)
+    const isSessionEvent = (v: unknown): v is TAL.SessionEvent => eventTypes.includes((v as TAL.SessionEvent)?.type)
+
+    const channels: Record<TAL.BridgeChannel, (body: string) => undefined | number> = {
         stdout: (body) => void services.stdout.write(body),
         stderr: (body) => void services.stderr.write(body),
-        end: (body) => {
+        send: <T extends SessionEventType>(body: string) => {
             try {
-                const payload = body ? JSON.parse(body) as TAL.SessionResult : undefined
-                if (!isTestResult(payload)) return 400
-                if (singleRun) services.resolve(payload)
-                ended = true
+                const message = body ? JSON.parse(body) as TAL.SessionEvent : undefined
+                if (!isSessionEvent(message)) return 400
+                const fn = eventMap[message.type as T]
+                if (!fn) return
+                return fn(message.data as SessionEventData<T>)
             } catch (e) {
                 services.stderr.write(`${stringify(e)}\n`)
                 return 400
@@ -77,7 +94,7 @@ export const createChannel = ({prefix, services, timeout, singleRun = true}: Cha
     }
 
     const channelNames = Object.keys(channels)
-    const isChannelName = (v: string): v is ChannelName => channelNames.includes(v)
+    const isChannelName = (v: string): v is TAL.BridgeChannel => channelNames.includes(v)
 
     const handler = async (c: ContextLike, next: Next) => {
         if (!c.req.path.startsWith(prefix)) return next()

@@ -8,24 +8,25 @@
 <body>
 <pre id="output"></pre>
 <script type="module">
-    import {end, load, session, stdout} from "test-assert-lite/session"
+    import {connect, end, load, session} from "test-assert-lite/session"
 
     // The CLI puts its config into the head as JSON, ahead of this script.
     const json = document.querySelector(`script[type="application/vnd.test-session+json"]`)?.textContent
     const options = json && JSON.parse(json)?.session || {}
+    const bridge = connect({fetch})
 
     // The page reports with its own fetch, to the run's URL it sits under:
     // it takes the window's errors outside the tests, and the console goes
     // the same way.
     session({
-        fetch: fetch,
+        bridge: bridge,
         uncaught: window,
         console: console,
         reporter: options.reporter,
         quiet: options.quiet,
         output: text => {
             document.querySelector("#output")?.append(text)
-            stdout.write(text)
+            bridge.stdout.write(text)
         },
     })
 
