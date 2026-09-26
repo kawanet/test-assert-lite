@@ -85,7 +85,7 @@ export const createChannel = ({prefix, services, timeout, singleRun = true}: Cha
                 if (!isSessionEvent(message)) return 400
                 const fn = eventMap[message.type as T]
                 if (!fn) return
-                fn(message.data as SessionEventData<T>)
+                return fn(message.data as SessionEventData<T>)
             } catch (e) {
                 services.stderr.write(`${stringify(e)}\n`)
                 return 400
