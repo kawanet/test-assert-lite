@@ -65,19 +65,19 @@ export const clientFromBridge = (client: TAL.BridgeAPI): BridgeClient => {
     }
 
     return {
-        begin: async () => {
+        begin: () => new Promise((resolve, reject) => {
             last = Date.now()
             started ||= last
             alive ??= setInterval(tick, TICK_MS)
-            client.send({type: "session:begin"})
-        },
+            client.send({type: "session:begin"}, (err) => (err ? reject(err) : resolve()))
+        }),
         stdout: onWrite(stdout, tack),
         stderr: onWrite(stderr, tack),
-        end: async (data) => {
+        end: (data) => new Promise((resolve, reject) => {
             if (alive != null) clearInterval(alive)
             alive = null
-            client.send({type: "session:end", data})
-        },
+            client.send({type: "session:end", data}, (err) => (err ? reject(err) : resolve()))
+        }),
     }
 }
 
@@ -98,10 +98,10 @@ const bufferedBridge = (client: TAL.BridgeAPI): TAL.BridgeAPI => {
                 stderr.write(chunk)
             },
         },
-        send: (message) => {
+        send: (message, callback) => {
             stdout.flush()
             stderr.flush()
-            client.send(message)
+            client.send(message, callback)
         },
     }
 }
@@ -112,17 +112,17 @@ export const bridgeFromFetch = (fetch: TAL.FetchLike): TAL.BridgeAPI => {
 
 const inOrderBridge = (bridge: BridgeIPC): TAL.BridgeAPI => {
     // Every request follows the one before, so each stream stays in order.
-    let inflight: Promise<void> = Promise.resolve()
+    let inflight: Promise<unknown> = Promise.resolve()
 
     // Request failures are ignored. Later requests are still attempted.
-    const chain = (fn: () => Promise<unknown>): Promise<void> => {
-        return inflight = inflight.then(fn).then(NOP, NOP)
+    const chain = (fn: () => Promise<unknown>): Promise<unknown> => {
+        return inflight = inflight.finally(fn)
     }
 
     return {
-        stdout: {write: (chunk) => void chain(() => bridge.stdout(chunk))},
-        stderr: {write: (chunk) => void chain(() => bridge.stderr(chunk))},
-        send: (message) => void chain(() => bridge.send(message)),
+        stdout: {write: (chunk) => void chain(() => bridge.stdout(chunk)).catch(NOP)},
+        stderr: {write: (chunk) => void chain(() => bridge.stderr(chunk)).catch(NOP)},
+        send: (message, callback = NOP) => void chain(() => bridge.send(message)).then(() => callback(null), callback),
     }
 }
 

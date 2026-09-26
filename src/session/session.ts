@@ -46,6 +46,8 @@ export interface Sessions {
     schedule: () => void
 }
 
+const NOP = () => null
+
 export const createSessions = (harness: HarnessState, assert: TAL.TestContextAssert): Sessions => {
     let cycle: Cycle | null = null
 
@@ -88,8 +90,8 @@ export const createSessions = (harness: HarnessState, assert: TAL.TestContextAss
             closed: false,
         }
 
-        void client?.begin()
-        const close: Cycle["close"] = async (result) => client?.end(result)
+        void client?.begin().catch(NOP)
+        const close: Cycle["close"] = async (result) => void client?.end(result).catch(NOP)
         return {services, report, close, auto, run, startedAt: performance.now(), held: true, walk: null, closing: false, failure: undefined}
     }
 
