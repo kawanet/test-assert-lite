@@ -78,9 +78,11 @@ export class Tester extends Job {
             },
             diagnostic: (message) => {
                 // node:test keeps diagnostics for the report; one arriving
-                // after the report has no place to go.
+                // after the report has no place to go. The call is synchronous,
+                // as node's is. A reporter failure reaches the run through the
+                // next awaited event, so this one has nothing to add.
                 if (this.settled) return
-                void this.run.emit("test:diagnostic", {message, nesting: this.nesting, level: "info"})
+                void this.run.emit("test:diagnostic", {message, nesting: this.nesting, level: "info"}).catch(() => undefined)
             },
             test: (...args: Args<TestFn>) => this.subtest(args),
         }
