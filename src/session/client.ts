@@ -1,7 +1,7 @@
-// The page's bridge to the CLI: one POST per channel, by a
-// path relative to the page, with the fetch it is given. Text is buffered
-// per stream and sent in one request per flush, so a burst of a hundred
-// console lines is one round trip.
+// The page's bridge to the CLI, over the fetch it is given. Text is
+// buffered per stream and sent in one request per flush, so a burst of a
+// hundred lines is one round trip. A change of stream, or a message,
+// flushes first, so the CLI gets everything in the order it was written.
 
 import type {TAL} from "test-assert-lite"
 import {delayedBufWriter} from "../utils/buf-writer.ts"
@@ -49,6 +49,7 @@ const onWrite = (writer: TAL.Writer, fn: () => void): TAL.Writer => {
     }
 }
 
+// What stands in for a bridge when the run has none.
 export const defaultClient = (defaults?: RunServicesOptions): BridgeClient => {
     const {stdout, stderr} = getStreams(defaults)
     return {
@@ -59,9 +60,8 @@ export const defaultClient = (defaults?: RunServicesOptions): BridgeClient => {
     }
 }
 
-/**
- * Creates the page's bridge to the CLI through `begin`, `stdout`, `stderr` and `end`.
- */
+// Drives the bridge for one run: the session's messages, and the alive
+// line while the page is quiet.
 export const bridgeClient = (client: TAL.BridgeAPI): BridgeClient => {
     let alive: ReturnType<typeof setInterval> | null = null
     let started = 0
@@ -93,6 +93,8 @@ export const bridgeClient = (client: TAL.BridgeAPI): BridgeClient => {
     }
 }
 
+// Gathers each stream for a flush. The other stream and send() flush it
+// first, so nothing overtakes what was written before it.
 const bufferedBridge = (client: TAL.BridgeAPI): TAL.BridgeAPI => {
     const stdout = delayedBufWriter(client.stdout, FLUSH_MS)
     const stderr = delayedBufWriter(client.stderr, FLUSH_MS)
@@ -118,6 +120,7 @@ const bufferedBridge = (client: TAL.BridgeAPI): TAL.BridgeAPI => {
     }
 }
 
+// What connect() gives: the fetch, kept in order, then buffered.
 export const bridgeFromFetch = (fetch: TAL.FetchLike): TAL.BridgeAPI => {
     return bufferedBridge(inOrderBridge(ipcFromFetch(fetch)))
 }
@@ -138,6 +141,7 @@ const inOrderBridge = (bridge: BridgeIPC): TAL.BridgeAPI => {
     }
 }
 
+// One POST per channel, by a path relative to the page.
 const ipcFromFetch = (fetch: TAL.FetchLike): BridgeIPC => {
     return {
         stdout: chunk => fetch("stdout", {method: "POST", body: chunk}),

@@ -259,8 +259,8 @@ export declare namespace TAL {
         off(event: string, listener: (...args: unknown[]) => void): unknown
     }
 
-    // What the session reports to the CLI with: a POST to one of `begin`,
-    // `stdout`, `stderr` and `end`, relative to the page. The response is never read.
+    // What the bridge posts with, by a path relative to the page. The
+    // response is never read.
     type FetchLike = (url: string, init: {method: "POST", body: string}) => Promise<unknown>
 
     // What a session takes over: the five methods a page's console has.
@@ -275,9 +275,9 @@ export declare namespace TAL {
     interface SessionOptions {
         /** What the run's events are formatted with; `reporter.spec()` unless given. */
         reporter?: ReporterFn | string
-        /** Where the formatted text goes; the session's `stdout` unless given. */
+        /** Where the formatted text goes, the run's stdout unless given. */
         output?: OutputFn
-        /** Reports the run to the CLI, with this. Nothing is sent without it. */
+        /** Reports the run to the CLI over this bridge. Nothing is sent without one. */
         bridge?: BridgeAPI
         /**
          * Takes the errors outside the tests, until end(): the uncaught
@@ -299,13 +299,13 @@ export declare namespace TAL {
         success: boolean
     }
 
-    // One of the session's streams.
+    // One of the run's streams.
     interface Writer {
         write(chunk: string): void
     }
 
     // The session's own entry, `test-assert-lite/session`: opening it,
-    // loading the suites into it, and ending it.
+    // loading the suites into it, ending it, and reaching the CLI.
     interface SessionAPI {
         /** Opens a new session for the following tests. */
         session(options?: SessionOptions): void
@@ -313,24 +313,28 @@ export declare namespace TAL {
         load(file: string): Promise<void>
         /** Runs every registered test, and closes the session. */
         end(): Promise<SessionResult>
-        /** Builds a bridge object with fetch API */
+        /** Makes the bridge to the CLI over the fetch given, for session() to report with. */
         connect: (options: {fetch: FetchLike}) => BridgeAPI
     }
 
     // --- session bridge ---
 
+    // The page's side of a CLI run, shaped after a child process: its
+    // streams, and a channel for messages.
     interface BridgeAPI {
-        /** The console of the session */
+        /** The CLI's stdout and stderr, as the page writes them. */
         stdout: Writer
         stderr: Writer
-        /** IPC channel for SessionEvent */
+        /** Sends a message to the CLI, as a child process does to its parent. */
         send: (message: SessionEvent, callback?: (error: Error | null) => void) => void
     }
 
+    // What send() carries.
     type SessionEvent =
         | {type: "session:begin", data?: undefined}
         | {type: "session:end", data: SessionResult}
 
+    // The paths under the run's URL that the bridge posts to.
     type BridgeChannel = "stdout" | "stderr" | "send"
 
     // --- harness ---

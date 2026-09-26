@@ -30,6 +30,7 @@ const nullWriter: TAL.Writer = {write: (() => undefined)}
 
 const hasProcess = (): boolean => "undefined" !== typeof process && "function" === typeof process.stdout?.write
 
+/** The streams a run falls back on. */
 export const getStreams = (streams: RunServicesOptions = {}): Required<RunServicesOptions> => {
     if (hasProcess()) streams = process
     return {

@@ -28,6 +28,8 @@ export const createBufWriter = (): BufWriter => {
     }
 }
 
+// Gathers the writes, and passes them on together after the interval, or
+// on flush().
 export const delayedBufWriter = (writer: TAL.Writer, interval: number): DelayedWriter => {
     const buf = createBufWriter()
     let timer: ReturnType<typeof setTimeout> | null = null
