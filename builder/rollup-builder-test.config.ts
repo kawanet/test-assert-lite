@@ -6,33 +6,16 @@ import sucrase from "@rollup/plugin-sucrase"
 import type {RollupOptions} from "rollup"
 import {showFiles} from "./show-files.ts"
 
-// Self-eating build: the suites are written against `node:test` and
-// `node:assert`, and the CLI that runs this bundle points both at the
-// package itself through a resolve hook, so they stay as written here and
-// the bundle exercises the library with the library.
+const shouldBundled = [
+    "multi-entry.js",
+    "event-lite",
+]
+
 const rollupConfig: RollupOptions = {
-    // src/extras/ tests exercise Node-only code such as the HTTP server, and
-    // this bundle runs under the package's own CLI, so they stay out.
     input: ["../src/**/*.test.ts", "!../src/extras/*"],
 
-    // Left to the CLI's hook, plus the builtins a suite reaches for
-    // directly. Listed by name rather than by pattern so the alias below
-    // still sees the relative entry imports first.
-    external: [
-        "test-assert-lite",
-        "test-assert-lite/assert",
-        "test-assert-lite/assert/strict",
-        "test-assert-lite/reporter/html",
-        "test-assert-lite/reporter/spec",
-        "test-assert-lite/reporter/tap",
-        "test-assert-lite/session",
-        "test-assert-lite/test",
-        "node:assert",
-        "node:assert/strict",
-        "node:module",
-        "node:path",
-        "node:test",
-    ],
+    // Bare specifiers stay external; only relative paths are bundled.
+    external: v => /^[^./]/.test(v) && !shouldBundled.includes(v),
 
     output: {
         file: "./tests/bundled.mjs",
@@ -46,18 +29,12 @@ const rollupConfig: RollupOptions = {
     plugins: [
         json(),
 
-        // The suites reach the subject by relative path so they run on the
-        // sources directly under `node --test`. Only the entry is matched,
-        // whatever directory the suite sits in: anything else stays inlined,
-        // which is what src/test-utils/ needs.
         alias({
             entries: [
                 {find: /^(\.\.?\/)+index\.ts$/, replacement: "test-assert-lite"},
             ],
         }),
 
-        // What a suite takes from a devDependency is bundled in, as the
-        // library's own imports are, so the page needs no map for it.
         nodeResolve({
             browser: true,
             preferBuiltins: false,

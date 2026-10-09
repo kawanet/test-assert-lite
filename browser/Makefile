@@ -66,8 +66,7 @@ test-webdriver: all
 		$(if $(WEBDRIVER_HOST),--port $(WEBDRIVER_HOST):0) \
 		browser/tests/bundled.mjs
 
-# `install` first, so the browser is there. Cheap once it is (see LAUNCHABLE).
-test: install test-chromium
+test: test-chromium
 
 # Every Playwright browser, on the same bundle. Run by `npm run test-max`.
 test-playwright: install-all test-chromium test-firefox test-webkit

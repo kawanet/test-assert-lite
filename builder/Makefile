@@ -29,23 +29,9 @@ EXTRAS_CONFIG := ./rollup-extras.config.ts
 BROWSER_TEST_CONFIG := ./rollup-browser-test.config.ts
 BUILDER_TEST_CONFIG := ./rollup-builder-test.config.ts
 
-# The shipped bundle is the whole library, so this cap is tight enough to
-# notice an unintended dependency being pulled in. Pre-release, features
-# still land in quick succession, so the headroom is wider than the ~20%
-# over the actual size (round 10KB) it will settle on once published.
 MJS_MAX_BYTES := 100000
-
-# Minified build of the same sources. The cap size is noted on README.md
 MINJS_MAX_BYTES := $(shell expr 1024 \* 32)
-
-# The extras bundle externalizes the library, Node builtins and Playwright
-# (see rollup-extras.config.ts) but carries the loopback server, the watch
-# and the browser application, so the cap sits a fifth above what those come to.
 EXTRAS_MAX_BYTES := 80000
-
-# Shared by both test bundles, which inline the same suites while the
-# package itself stays external. Development-only output, never published,
-# so this only guards against gross growth and can stay generous.
 TEST_MAX_BYTES := 300000
 
 ALL := $(MJS_DST) $(MINJS_DST) $(EXTRAS_DST) $(BUILDER_TEST_DST)
@@ -96,28 +82,17 @@ $(MINJS_DST): $(MINJS_CONFIG) $(SRC) $(BUILDER_SRC)
 	@test "$$(wc -c < $@)" -le $(MINJS_MAX_BYTES) || { echo "ERROR: $@ exceeds $(MINJS_MAX_BYTES) byte cap" >&2; exit 1; }
 	@echo ""
 
-# Bundle of the test suites for the browser, with node:test, node:assert
-# and the package name left external for the import map the CLI serves,
-# which points all three at the minified build.
 $(BROWSER_TEST_DST): $(BROWSER_TEST_CONFIG) $(SRC) $(BUILDER_SRC) $(TEST_SRC) $(TYPES) $(MJS_DST)
 	@mkdir -p $(dir $@)
 	../node_modules/.bin/rollup -c $<
-	@# An inlined copy of the library would be a second harness beside the
-	@# one the import map serves, so the suites must reach it through the
-	@# alias only.
 	@! grep -q 'const createTAL' $@ || { echo "ERROR: $@ inlines the library" >&2; exit 1; }
 	@ls -l $@
 	@test "$$(wc -c < $@)" -le $(TEST_MAX_BYTES) || { echo "ERROR: $@ exceeds $(TEST_MAX_BYTES) byte cap" >&2; exit 1; }
 	@echo ""
 
-# Bundle of the test suites with node:test and node:assert left as
-# written: the CLI's resolve hook points both at this package, so the
-# suites exercise the library with the library.
 $(BUILDER_TEST_DST): $(BUILDER_TEST_CONFIG) $(SRC) $(BUILDER_SRC) $(TEST_SRC) $(TYPES) $(MJS_DST)
 	@mkdir -p $(dir $@)
 	../node_modules/.bin/rollup -c $<
-	@# An alias that misses a relative import inlines the sources instead,
-	@# and the suites then test a second copy of the library.
 	@! grep -q 'const createTAL' $@ || { echo "ERROR: $@ inlines the library" >&2; exit 1; }
 	@ls -l $@
 	@test "$$(wc -c < $@)" -le $(TEST_MAX_BYTES) || { echo "ERROR: $@ exceeds $(TEST_MAX_BYTES) byte cap" >&2; exit 1; }
